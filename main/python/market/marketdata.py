@@ -10,6 +10,9 @@ class MktData:
         df = pd.read_csv(file_location)
         df = self._fix_dates(df)
         df= df.drop(['Currency'], axis=1) # All currency fields are 'BTC'
+        df['24h High (USD)'].astype(float)
+        df['24h Low (USD)'].astype(float)
+        df['Date'] = pd.to_datetime(df['Date'])
         return df
 
     #TODO: Fix url and use parameters in query
