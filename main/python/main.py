@@ -9,18 +9,16 @@ def main():
     df = md.get_data_from_csv(
         '../../resources/BTC_USD_2018-07-14_2019-07-13-CoinDesk.csv')
 
-    # draw_candlestick(df, 'candlsticks.png')
-    # draw_terminal(df['Date'].tolist(), df['Low'].tolist())
+    df2 = md.get_data_from_csv(
+        '../../resources/BTC_USD_2019-07-12_2019-12-30-CoinDesk.csv')
 
-    # draw_to_image(df['Date'].tolist(), df['Low'].tolist(), 'price.png')
-    # draw_terminal(df['Date'].tolist(), df['Low'].tolist())
-    # df = compute_RSI(df)
-    # draw_terminal(df['Date'].tolist(), df['RSI'].tolist())
-    # draw_to_image(df['Date'].tolist(), df['RSI'].tolist(), 'rsi.png', 'rsi')
+    df3 = md.get_data_from_csv(
+        '../../resources/BTC_USD_2019-11-30_2019-12-31-CoinDesk.csv')
 
-    # sell_70_buy_70_RSI(df)
-    # buy_t0_sell_eoy(df)
+    # draw_to_image(df3['Date'].tolist(), df3['Close'].tolist(), 'price.png')
     sell_buy_passing_50_RSI(df)
+    df3 = compute_RSI(df3)
+    # draw_to_image(df3['Date'].tolist(), df3['RSI'].tolist(), 'rsi.png', 'rsi')
 
 
 main()

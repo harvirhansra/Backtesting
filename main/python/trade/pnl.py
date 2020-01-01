@@ -4,8 +4,8 @@ def win_or_loss(s0, s1, quantity):
     pnl = quantity*diff
     if quantity > 0:
         if s0 > s1:
-            return 'loss', pnl, -percent
+            return 'loss', -round(pnl, 3), -round(percent, 3)
         else:
-            return 'win', pnl, percent
+            return 'win', round(pnl, 3), round(percent, 3)
     else:
         return 'did nothing'

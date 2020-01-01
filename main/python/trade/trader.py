@@ -13,7 +13,7 @@ class Trader:
             future_balance = self.balance - (price*quantity)
 
         if future_balance < 0:
-            print('Too poor')
+            print('Not enough dollars')
             return False
         if future_balance >= 0:
             self.balance = future_balance
