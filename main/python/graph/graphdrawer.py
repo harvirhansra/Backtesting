@@ -20,7 +20,12 @@ def draw_to_image(x, y, path, type='price'):
         y = y[14:]
         ax.plot(x, [70]*len(x), 'r')
         ax.plot(x, [30]*len(x), 'g')
-    ax.plot(x, y)
+    else:
+        if any(isinstance(yi, list) for yi in y):
+            for yi in y:
+                ax.plot(x, yi)
+        else:
+            ax.plot(x, y)
     fig.savefig(path)
 
 

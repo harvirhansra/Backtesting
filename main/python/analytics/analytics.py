@@ -29,7 +29,13 @@ def compute_RSI(df, n=14):
     return df
 
 
-def compute_MA():
+def compute_MA(df, n=14):
+    df['MA'] = df.Close.rolling(window=n).mean()
+    df['MA_std'] = df.MA.rolling(window=n).std()
+    return df
+
+
+def compute_EMA(df, n=14):
     pass
 
 
