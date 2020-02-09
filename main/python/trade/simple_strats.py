@@ -147,7 +147,7 @@ def above_under_ma_std(df, stds=2, lookback=14):
                     prev_trade = day[1]
                     print('')
 
-    _report_final_pnl(start_balance, start_ccy, trader.balance, trader.btc, trader.ccy)
+    return _report_final_pnl(start_balance, start_ccy, trader.balance, trader.btc, trader.ccy)
 
 
 def moving_past_ma(df):
@@ -233,7 +233,9 @@ def _report_final_pnl(start_balance, start_btc, balance, btc, ccy):
     final = balance if final_is_usd else btc
     start = start_balance if final_is_usd else start_btc
     final_ccy = '$' if final_is_usd else ccy
+    pnl = int((final/start)*100 - 100)
     print('Starting balance: {}{}'.format(final_ccy, start))
     print('Final balance: {}{}'.format(final_ccy, final))
-    print('PnL: '+str(int((final/start)*100 - 100))+'%')
+    print('PnL: '+str(pnl)+'%')
     print('')
+    return pnl

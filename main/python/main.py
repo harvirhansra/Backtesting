@@ -20,22 +20,22 @@ def main():
 
     df6 = pd.read_csv('../../resources/BTC_USD_2020-01-22_2020-01-27_Hourly.csv')
 
-    df5['Low'].astype(float)
-    df5['High'].astype(float)
-    df5.loc[:, 'Currency'] = 'BTC'
-    df5['Date'] = pd.to_datetime(df5['Date'])
+    df1['Low'].astype(float)
+    df1['High'].astype(float)
+    df1.loc[:, 'Currency'] = 'BTC'
+    df1['Date'] = pd.to_datetime(df5['Date'])
 
     from pandas.plotting import register_matplotlib_converters
     register_matplotlib_converters()
 
-    for i, market in enumerate([df1, df2, df3, df4, df5]):
-        print('Testing market number {}'.format(i+1))
-        print('')
-        macd_crossing_singal_line(market)
-        time.sleep(3)
-        above_under_ma_std(market)
-        time.sleep(3)
-        print('')
+    # for i, market in enumerate([df1, df2, df3, df4, df5]):
+    #     print('Testing market number {}'.format(i+1))
+    #     print('')
+    #     macd_crossing_singal_line(market)
+    #     time.sleep(3)
+    #     above_under_ma_std(market)
+    #     time.sleep(3)
+    #     print('')
 
     # macd_crossing_singal_line(df5)
 
@@ -43,6 +43,9 @@ def main():
     # above_under_ma_std(df5, stds=std)
     # # draw_to_image(df5.Timestamp.tolist(), [df5.Close.tolist(), df5.MA.tolist(),
     #                                        df5.MA+(std*df5.MA_std).tolist(), df5.MA-(std*df5.MA_std).tolist()], './price')
+
+    from calibration.calibration import calibrate_std
+    calibrate_std(df1)
 
 
 main()
