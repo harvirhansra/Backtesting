@@ -35,12 +35,25 @@ def compute_MA(df, n=14):
     return df
 
 
+def compute_WMA(df, n=14):
+    weights = np.arange(1, n)
+    df['WMA'] = df.Close.rolling(window=n).apply(lambda prices: np.dot(prices, weights)/weights.sum())
+    df['WMA_std'] = df.WMA.rolling(window=n).std()
+    return df
+
+
 def compute_EMA(df, n=14):
-    pass
+    df['EMA'] = df.Close.ewm(span=n).mean()
+    df['EMA_std'] = df.EMA.rolling(window=n).std()
+    return df
 
 
-def compute_MACD():
-    pass
+def compute_MACD(df):
+    df['EMA26'] = df.Close.ewm(span=26).mean()
+    df['EMA12'] = df.Close.ewm(span=12).mean()
+    df['MACD'] = df.EMA26 - df.EMA12
+    df['SL'] = df.MACD.ewm(span=9).mean()  # signal line
+    return df
 
 
 def compute_SAR():

@@ -1,9 +1,10 @@
 class Trader:
 
-    def __init__(self, balance, name='harvir', btc=0):
+    def __init__(self, balance, ccy, name='harvir', btc=0):
         self.name = name
         self.balance = balance
         self.btc = btc
+        self.ccy = ccy
 
     def buy(self, price, date, quantity=0, max=False):
         if max:
@@ -19,7 +20,7 @@ class Trader:
             self.balance = future_balance
             self.btc += quantity
         if quantity > 0:
-            print('Bought {}BTC at {} on {}'.format(quantity, price, date))
+            print('Bought {}{} at {} on {}'.format(quantity, self.ccy, price, date))
         return self.balance, price, quantity
 
     def sell(self, price, date, quantity=0, max=False):
@@ -31,5 +32,5 @@ class Trader:
         self.balance += price*quantity
         self.btc -= quantity
         if quantity > 0:
-            print('Sold {}BTC at {} on {}'.format(quantity, price, date))
+            print('Sold {}{} at {} on {}'.format(quantity, self.ccy, price, date))
         return self.balance, price, quantity
