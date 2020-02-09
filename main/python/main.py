@@ -2,8 +2,10 @@ import time
 import pandas as pd
 
 from market.marketdata import get_data_from_csv
-from graph.graphdrawer import draw_terminal, draw_to_image, draw_candlestick
+from calibration.calibration import calibrate_std
+from trade.calibration_strats import above_under_ma_std_calib
 from analytics.analytics import compute_RSI, compute_MA, compute_EMA
+from graph.graphdrawer import draw_terminal, draw_to_image, draw_candlestick
 from trade.simple_strats import macd_crossing_singal_line, above_under_ma_std, sell_70_buy_30_RSI
 
 
@@ -44,8 +46,9 @@ def main():
     # # draw_to_image(df5.Timestamp.tolist(), [df5.Close.tolist(), df5.MA.tolist(),
     #                                        df5.MA+(std*df5.MA_std).tolist(), df5.MA-(std*df5.MA_std).tolist()], './price')
 
-    from calibration.calibration import calibrate_std
-    calibrate_std(df1)
+    # calibrate_std(df1)
+
+    above_under_ma_std_calib(df1)
 
 
 main()
