@@ -30,6 +30,7 @@ def compute_RSI(df, n=14):
 
 
 def compute_MA(df, n=14):
+    pd.set_option('mode.chained_assignment', None)
     df['MA'] = df.Close.rolling(window=n).mean()
     df['MA_std'] = df.MA.rolling(window=n).std()
     return df

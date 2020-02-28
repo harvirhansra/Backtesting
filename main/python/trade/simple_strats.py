@@ -99,7 +99,7 @@ def sell_buy_passing_50_RSI(df, n=14):
     _report_final_pnl(start_balance, start_btc, trader.balance, trader.btc)
 
 
-def above_under_ma_std(df, stds=2, lookback=14):
+def above_under_ma_std(df, stds=2, lookback=14, log=True, draw=False):
     df = compute_MA(df, n=lookback)
     prev_trade = df.iloc[0]
     trader = Trader(10000.0, prev_trade['Currency'])
@@ -108,7 +108,8 @@ def above_under_ma_std(df, stds=2, lookback=14):
     day_entered = 10000
 
     for i, day in enumerate(df.iterrows()):
-        # draw_terminal(df['Date'][0:i+1].tolist(), df['Close'][0:i+1].tolist())
+        if draw:
+            draw_terminal(df['Date'][0:i+1].tolist(), df['Close'][0:i+1].tolist())
 
         # if i == 0:
         #     trade = trader.buy(day[1]['Close'], date=day[1]['Date'], max=True)
@@ -131,23 +132,32 @@ def above_under_ma_std(df, stds=2, lookback=14):
                 prev_trade = day[1]
                 start_ccy = trade[2]
                 day_entered = i
-                print('')
+                if log:
+                    print('')
 
             if went_above_ma_std and not less_than_last_buy and trader.btc > 0 and i > day_entered:
                 trade = trader.sell(day[1]['Close'], date=day[1]['Date'], max=True)
                 if trade[2] > 0:
-                    print(win_or_loss(prev_trade['Close'], trade[1], trade[2], 'sell'))
-                    prev_trade = day[1]
-                    print('')
+                    if log:
+                        print(win_or_loss(prev_trade['Close'], trade[1], trade[2], 'sell'))
+                        prev_trade = day[1]
+                        print('')
+                    else:
+                        win_or_loss(prev_trade['Close'], trade[1], trade[2], 'sell')
+                        prev_trade = day[1]
 
             if went_below_ma_std and not greater_than_last_sell and trader.balance > 0 and i > day_entered:
                 trade = trader.buy(day[1]['Close'], date=day[1]['Date'], max=True)
                 if trade[2] > 0:
-                    print(win_or_loss(prev_trade['Close'], trade[1], trade[2], 'buy'))
-                    prev_trade = day[1]
-                    print('')
+                    if log:
+                        print(win_or_loss(prev_trade['Close'], trade[1], trade[2], 'buy'))
+                        prev_trade = day[1]
+                        print('')
+                    else:
+                        win_or_loss(prev_trade['Close'], trade[1], trade[2], 'buy')
+                        prev_trade = day[1]
 
-    return _report_final_pnl(start_balance, start_ccy, trader.balance, trader.btc, trader.ccy)
+    return _report_final_pnl(start_balance, start_ccy, trader.balance, trader.btc, trader.ccy, False)
 
 
 def moving_past_ma(df):
@@ -228,14 +238,15 @@ def macd_crossing_singal_line(df, std=0):
     _report_final_pnl(start_balance, start_ccy, trader.balance, trader.btc, trader.ccy)
 
 
-def _report_final_pnl(start_balance, start_btc, balance, btc, ccy):
+def _report_final_pnl(start_balance, start_btc, balance, btc, ccy, log=True):
     final_is_usd = btc == 0
     final = balance if final_is_usd else btc
     start = start_balance if final_is_usd else start_btc
     final_ccy = '$' if final_is_usd else ccy
     pnl = int((final/start)*100 - 100)
-    print('Starting balance: {}{}'.format(final_ccy, start))
-    print('Final balance: {}{}'.format(final_ccy, final))
-    print('PnL: '+str(pnl)+'%')
-    print('')
+    if log:
+        print('Starting balance: {}{}'.format(final_ccy, start))
+        print('Final balance: {}{}'.format(final_ccy, final))
+        print('PnL: '+str(pnl)+'%')
+        print('')
     return pnl

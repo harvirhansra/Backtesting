@@ -9,7 +9,7 @@ from mpl_finance import candlestick_ohlc
 def draw_terminal(x, y):
     x = mpl_dates.date2num(x)
     fig = tpl.figure()
-    fig.plot(x, y, width=140, height=30)
+    fig.plot(x, y, width=80, height=30)
     fig.show()
 
 

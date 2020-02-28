@@ -1,4 +1,4 @@
-import time
+import datetime
 import pandas as pd
 
 from market.marketdata import get_data_from_csv
@@ -22,33 +22,21 @@ def main():
 
     df6 = pd.read_csv('../../resources/BTC_USD_2020-01-22_2020-01-27_Hourly.csv')
 
-    df1['Low'].astype(float)
-    df1['High'].astype(float)
-    df1.loc[:, 'Currency'] = 'BTC'
-    df1['Date'] = pd.to_datetime(df5['Date'])
+    df7 = pd.read_csv('../../resources/Bitfinex_BTCUSD_1h.csv')
+
+    df7 = df7.tail(72)  # last 48 hours
+    df7['Date'] = df7['Date'].str.replace('-AM', ':00AM')
+    df7['Date'] = df7['Date'].str.replace('-PM', ':00PM')
+
+    df7['Low'].astype(float)
+    df7['High'].astype(float)
+    df7.loc[:, 'Currency'] = 'BTC'
+    df7['Date'] = pd.to_datetime(df7['Date'])
 
     from pandas.plotting import register_matplotlib_converters
     register_matplotlib_converters()
 
-    # for i, market in enumerate([df1, df2, df3, df4, df5]):
-    #     print('Testing market number {}'.format(i+1))
-    #     print('')
-    #     macd_crossing_singal_line(market)
-    #     time.sleep(3)
-    #     above_under_ma_std(market)
-    #     time.sleep(3)
-    #     print('')
-
-    # macd_crossing_singal_line(df5)
-
-    # std = 2
-    # above_under_ma_std(df5, stds=std)
-    # # draw_to_image(df5.Timestamp.tolist(), [df5.Close.tolist(), df5.MA.tolist(),
-    #                                        df5.MA+(std*df5.MA_std).tolist(), df5.MA-(std*df5.MA_std).tolist()], './price')
-
-    # calibrate_std(df1)
-
-    above_under_ma_std_calib(df1)
+    above_under_ma_std_calib(df7, 14, False)
 
 
 main()
