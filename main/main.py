@@ -5,7 +5,7 @@ from market.marketdata import get_data_from_csv
 from calibration.calibration import calibrate_std
 from trade.calibration_strats import above_under_ma_std_calib
 from analytics.analytics import compute_RSI, compute_MA, compute_EMA
-from graph.graphdrawer import graph, draw_terminal, draw_to_image, draw_candlestick
+from graph.graphdrawer import draw, draw_terminal, draw_to_image, draw_candlestick
 from trade.simple_strats import macd_crossing_singal_line, above_under_ma_std, sell_70_buy_30_RSI
 
 
