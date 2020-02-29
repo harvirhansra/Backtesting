@@ -1,9 +1,22 @@
-import matplotlib.pyplot as plt
-import matplotlib.dates as mpl_dates
-import pandas as pd
-import termplotlib as tpl
-
 from mpl_finance import candlestick_ohlc
+import termplotlib as tpl
+import pandas as pd
+import matplotlib.dates as mpl_dates
+import matplotlib.pyplot as plt
+import matplotlib
+
+
+def draw(x, y):
+    if type(x) is list and type(y) is list:
+        plt.plot(x, y)
+    if type(x) is list and type(y) is not list:
+        plt.plot(x, list(y))
+    if type(x) is not list and type(y) is list:
+        plt.plot(list(x), y)
+    else:
+        plt.plot(list(x), list(y))
+
+    plt.show(block=True)
 
 
 def draw_terminal(x, y):
