@@ -10,19 +10,19 @@ from trade.simple_strats import macd_crossing_singal_line, above_under_ma_std, s
 
 
 def main():
-    df1 = get_data_from_csv('../../resources/BTC_USD_2018-07-14_2019-07-13-CoinDesk.csv')
+    df1 = get_data_from_csv('../resources/BTC_USD_2018-07-14_2019-07-13-CoinDesk.csv')
 
-    df2 = get_data_from_csv('../../resources/BTC_USD_2019-07-12_2019-12-30-CoinDesk.csv')
+    df2 = get_data_from_csv('../resources/BTC_USD_2019-07-12_2019-12-30-CoinDesk.csv')
 
-    df3 = get_data_from_csv('../../resources/BTC_USD_2019-11-30_2019-12-31-CoinDesk.csv')
+    df3 = get_data_from_csv('../resources/BTC_USD_2019-11-30_2019-12-31-CoinDesk.csv')
 
-    df4 = get_data_from_csv('../../resources/ETH_USD_2018-04-05_2020-01-25-CoinDesk.csv')
+    df4 = get_data_from_csv('../resources/ETH_USD_2018-04-05_2020-01-25-CoinDesk.csv')
 
-    df5 = get_data_from_csv('../../resources/BTC_USD_2018-04-05_2020-01-25-CoinDesk.csv')
+    df5 = get_data_from_csv('../resources/BTC_USD_2018-04-05_2020-01-25-CoinDesk.csv')
 
-    df6 = pd.read_csv('../../resources/BTC_USD_2020-01-22_2020-01-27_Hourly.csv')
+    df6 = pd.read_csv('../resources/BTC_USD_2020-01-22_2020-01-27_Hourly.csv')
 
-    df7 = pd.read_csv('../../resources/Bitfinex_BTCUSD_1h.csv')
+    df7 = pd.read_csv('../resources/Bitfinex_BTCUSD_1h.csv')
 
     df7 = df7.tail(72)  # last 48 hours
     df7['Date'] = df7['Date'].str.replace('-AM', ':00AM')
