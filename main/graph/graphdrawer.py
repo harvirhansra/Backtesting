@@ -1,4 +1,5 @@
-from mpl_finance import candlestick_ohlc
+from mplfinance.original_flavor import candlestick_ohlc
+
 import termplotlib as tpl
 import pandas as pd
 import matplotlib.dates as mpl_dates

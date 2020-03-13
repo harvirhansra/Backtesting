@@ -1,12 +1,9 @@
-import datetime
+import time
 import pandas as pd
 
 from market.marketdata import get_data_from_csv
-from calibration.calibration import calibrate_std
 from trade.calibration_strats import above_under_ma_std_calib
-from analytics.analytics import compute_RSI, compute_MA, compute_EMA
-from graph.graphdrawer import draw, draw_terminal, draw_to_image, draw_candlestick
-from trade.simple_strats import macd_crossing_singal_line, above_under_ma_std, sell_70_buy_30_RSI
+from trade.simple_strats import above_under_ma_std
 
 
 def main():
@@ -22,21 +19,21 @@ def main():
 
     df6 = pd.read_csv('../resources/BTC_USD_2020-01-22_2020-01-27_Hourly.csv')
 
-    df7 = pd.read_csv('../resources/Bitfinex_BTCUSD_1h.csv')
-
-    df7 = df7.tail(72)  # last 48 hours
-    df7['Date'] = df7['Date'].str.replace('-AM', ':00AM')
-    df7['Date'] = df7['Date'].str.replace('-PM', ':00PM')
-
-    df7['Low'].astype(float)
-    df7['High'].astype(float)
-    df7.loc[:, 'Currency'] = 'BTC'
-    df7['Date'] = pd.to_datetime(df7['Date'])
+    df6['Low'].astype(float)
+    df6['High'].astype(float)
+    df6.loc[:, 'Currency'] = 'BTC'
+    df6['Date'] = pd.to_datetime(df6['Timestamp'])
 
     from pandas.plotting import register_matplotlib_converters
     register_matplotlib_converters()
 
-    above_under_ma_std_calib(df7, 14, False)
+
+    start = time.time()
+    # above_under_ma_std_calib(df6, 14, False)
+    above_under_ma_std(df6, stds=1.5, log=True, draw=True)
+
+    exec_time = time.time() - start
+    print(f'Backtesting ran for {exec_time} seconds')
 
 
 main()
