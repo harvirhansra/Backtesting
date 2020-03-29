@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package test;
+
+service Test {
+  rpc SayHello (HelloRequest) returns (HelloReply) {}
+  rpc Add(Numbers) returns (Sum) {}
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}
+
+message Numbers {
+  repeated int32 numbers = 1;
+}
+
+message Sum {
+  int32 sum = 1;
+}
