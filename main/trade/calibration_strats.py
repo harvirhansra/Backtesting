@@ -2,7 +2,7 @@ import time
 
 from trade.trader import Trader
 from trade.pnl import win_or_loss
-from graph.graphdrawer import draw_terminal
+from ui.graphdrawer import draw_terminal
 from analytics.analytics import compute_MA
 from trade.simple_strats import _report_final_pnl
 from calibration.calibration import calibrate_std

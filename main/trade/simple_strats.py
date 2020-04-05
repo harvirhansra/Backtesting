@@ -1,7 +1,7 @@
 from trade.trader import Trader
 from trade.pnl import win_or_loss
 from analytics.analytics import compute_RSI, compute_MA, compute_MACD
-from graph.graphdrawer import draw_terminal
+from ui.graphdrawer import draw_terminal
 
 
 def sell_70_buy_30_RSI(df, n=14, log=True):
