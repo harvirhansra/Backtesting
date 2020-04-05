@@ -6,7 +6,7 @@ from trade.simple_strats import above_under_ma_std
 
 def calibrate_std(df, threaded=True):
     results = {}
-    stds = list(np.arange(0, 2, 0.25))
+    stds = list(np.arange(0, 3, 0.25))
 
     if threaded:
         threads = []

@@ -28,9 +28,9 @@ def main():
 
     start = time.time()
 
-    # macd_crossing_singal_line(df2, stds=0, log=True, draw=True)
-    above_under_ma_std_calib(df2, 14, log=True, draw=True, threaded=False)
-    # above_under_ma_std(df2, stds=1.5, log=True, draw=True)
+    macd_crossing_singal_line(df6, stds=0, log=True, draw=True)
+    # above_under_ma_std_calib(df6, 14, log=True, draw=True, threaded=False)
+    # above_under_ma_std(df1, stds=1.5, log=True, draw=True)
 
     exec_time = time.time() - start
     print(f'Backtesting ran for {exec_time} seconds')

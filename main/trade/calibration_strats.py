@@ -13,7 +13,7 @@ def above_under_ma_std_calib(df, lookback=14, log=True, draw=False, threaded=Fal
     prev_trade = df.iloc[0]
     trader = Trader(10000.0, prev_trade['Currency'])
     start_balance = trader.balance
-    start_ccy = 0
+    start_btc = 0
     day_entered = 10000
 
     plays = []
@@ -25,6 +25,8 @@ def above_under_ma_std_calib(df, lookback=14, log=True, draw=False, threaded=Fal
                 std = calibrate_std(df.iloc[i-100:i-1], threaded)
             else:
                 std = calibrate_std(df.iloc[0:i-1], threaded)
+
+            # std = calibrate_std(df[0:i-1], threaded)
 
             if draw:
                 draw_terminal(df['Date'][0:i+1].tolist(), df['Close'][0:i+1].tolist())
@@ -47,28 +49,30 @@ def above_under_ma_std_calib(df, lookback=14, log=True, draw=False, threaded=Fal
 
             if went_above_ma_std and not less_than_last_buy and trader.btc > 0 and i > day_entered:
                 trade = trader.sell(day[1]['Close'], day[1]['Date'], max=True)
-                prev_trade = day[1]
                 if log:
                     plays.append(trade[3])
                     print(win_or_loss(prev_trade['Close'], trade[1], trade[2], 'sell'))
                     print('')
+                prev_trade = day[1]
 
             if went_below_ma_std and not greater_than_last_sell and trader.balance > 0 and i > day_entered:
                 trade = trader.buy(day[1]['Close'], date=day[1]['Date'], max=True)
-                prev_trade = day[1]
                 if log:
                     plays.append(trade[3])
                     print(win_or_loss(prev_trade['Close'], trade[1], trade[2], 'buy'))
                     print('')
+                prev_trade = day[1]
 
             if i == len(df)-1 and trader.btc > 0:
                 trade = trader.sell(day[1]['Close'], date=day[1]['Date'], max=True)
                 if log:
                     plays.append(trade[3])
                     print(win_or_loss(prev_trade['Close'], trade[1], trade[2], 'buy'))
+                    print('')
 
         if log:
             for play in plays:
                 print(play)
+            print('')
 
-    return _report_final_pnl(start_balance, start_ccy, trader.balance, trader.btc, trader.ccy)
+    return _report_final_pnl(start_balance, start_btc, trader.balance, trader.btc, trader.ccy)
