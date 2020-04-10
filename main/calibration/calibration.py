@@ -11,7 +11,7 @@ def calibrate_std(df, threaded=True):
     if threaded:
         threads = []
         for std in stds:
-            thread = Thread(target=_store_in_dict, args=(results, std, above_under_ma_std, df, std, 14, False, False))
+            thread = Thread(target=_store_in_dict, args=(results, std, above_under_ma_std, df, std, 14, False))
             threads.append(thread)
             thread.start()
 
@@ -19,7 +19,7 @@ def calibrate_std(df, threaded=True):
             thread.join()
     else:
         for std in stds:
-            results[std] = above_under_ma_std(df, std, 14, False, False)
+            results[std] = above_under_ma_std(df, std, 14, False)
 
     date = str(df.iloc[-1].Date).split()[0]
     pnls = list(results.values())
