@@ -1,11 +1,15 @@
+from collections import namedtuple
+
+buytuple = namedtuple('BuyTuple', ['new_balance', 'buy_price', 'quantity', 'string'])
+selltuple = namedtuple('SellTuple', ['new_balance', 'sell_price', 'quantity', 'string'])
+
 class Trader:
 
-    def __init__(self, balance, ccy,  name='harvir', btc=0, log=False):
+    def __init__(self, balance, ccy,  name='harvir', btc=0):
         self.name = name
         self.balance = balance
         self.btc = btc
         self.ccy = ccy
-        self.log = log
 
     def buy(self, price, date, quantity=0, max=False):
         if max:
@@ -15,24 +19,20 @@ class Trader:
             future_balance = self.balance - (price*quantity)
 
         if future_balance < 0:
-            if self.log:
-                print('Not enough dollars')
             return False
 
         if future_balance >= 0:
             self.balance = future_balance
             self.btc += quantity
 
-        return self.balance, price, quantity, 'Bought {}{} at {} on {}'.format(quantity, self.ccy, price, date)
+        return buytuple(self.balance, price, quantity, 'Bought {}{} at {} on {}'.format(quantity, self.ccy, price, date))
 
     def sell(self, price, date, quantity=0, max=False):
         if quantity > self.btc:
-            if self.log:
-                print('Not enough BTC')
             return False
 
         quantity = self.btc if max else quantity
         self.balance += price*quantity
         self.btc -= quantity
 
-        return self.balance, price, quantity, 'Sold {}{} at {} on {}'.format(quantity, self.ccy, price, date)
+        return selltuple(self.balance, price, quantity, 'Sold {}{} at {} on {}'.format(quantity, self.ccy, price, date))
