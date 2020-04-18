@@ -50,3 +50,7 @@ def draw_candlestick(df, path=None):
     candlestick_ohlc(ax, ohlc.values, width=0.6,
                      colorup='green', colordown='red', alpha=0.8)
     fig.savefig(path)
+
+
+def draw_to_gui(df):
+    return

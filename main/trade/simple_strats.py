@@ -1,10 +1,15 @@
 import time
+import numpy as np
+
+from collections import namedtuple
 
 from termcolor import colored
 from trade.trader import Trader
 from trade.pnl import win_or_loss
 from ui.graphdrawer import draw_terminal
 from analytics.analytics import compute_RSI, compute_MA, compute_MACD
+
+result = namedtuple('result', ['date', 'price', 'metric1', 'metric2', 'metric3', 'actiondate', 'actionprice', 'action'])
 
 
 def sell_70_buy_30_RSI(df, n=14, log=True, draw=False):
@@ -140,22 +145,24 @@ def sell_buy_passing_50_RSI(df, n=14, log=True, draw=False):
     return _report_final_pnl(start_balance, start_btc, trader.balance, trader.btc, trader.ccy, tm)
 
 
-def above_under_ma_std(df, stds=2, lookback=14, log=True, draw=False):
+def above_under_ma_std(df, stds=2, lookback=14, log=True, draw=False, calib=False):
     df = compute_MA(df, n=lookback)
     prev_trade = df.iloc[0]
     trader = Trader(10000.0, prev_trade.Currency)
     start_balance = trader.balance
-    day_entered = 10000
+    day_entered = np.inf
     start_btc = 0
+    start_day = (2*lookback - 2) if not calib else 0  # if df is coming from calibration then all trades will have MA and MA_std so we can start from 0
 
     plays = []
 
     for i, day in df.iterrows():
         prev_day = df.iloc[i-1]
-        if tm:
+
+        if draw:
             draw_terminal(df.Date[0:i+1].values, df.Close[0:i+1].values)
 
-        if i > lookback:
+        if i >= start_day:
             less_than_last_buy = day.Close < prev_trade.Close
             greater_than_last_sell = day.Close > prev_trade.Close
 
@@ -166,36 +173,42 @@ def above_under_ma_std(df, stds=2, lookback=14, log=True, draw=False):
 
             if went_below_ma_std and trader.balance > 0 and i < day_entered:  # when to join market
                 trade = trader.buy(day.Close, day.Date, max=True)
-                plays.append(trade.string)
+                plays.append((trade.date, trade.buy_price, 'buy'))
                 start_btc = trade.quantity
                 prev_trade = day
                 day_entered = i
 
             if went_above_ma_std and (not less_than_last_buy) and trader.btc > 0 and i > day_entered:
-                trade = sell(trader, day, prev_trade, tm)
+                trade = sell(trader, day, prev_trade, log)
                 if trade.quantity > 0:
                     prev_trade = day
-                    plays.append(trade.string)
+                    plays.append((trade.date, trade.sell_price, 'sell'))
 
             if went_below_ma_std and (not greater_than_last_sell) and trader.balance > 0 and i > day_entered:
-                trade = buy(trader, day, prev_trade, tm)
+                trade = buy(trader, day, prev_trade, log)
                 if trade.quantity > 0:
                     prev_trade = day
-                    plays.append(trade.string)
+                    plays.append((trade.date, trade.buy_price, 'buy'))
                     
 
-            if i == len(df)-1 and trader.btc > 0:
-                trade = sell(trader, day, prev_trade, tm)
+            if i == len(df)-1 and trader.btc > 0 and (not calib):
+                trade = sell(trader, day, prev_trade, log)
                 if trade.quantity > 0:
                     prev_trade = day
-                    plays.append(trade.string)
+                    plays.append((trade.date, trade.sell_price, 'sell'))
 
-    if tm:
+    if False:
         for play in plays:
             print(play)
+            
+    if calib:
+        return _report_final_pnl(start_balance, start_btc, trader.balance, trader.btc, trader.ccy, log)
 
-    return _report_final_pnl(start_balance, start_btc, trader.balance, trader.btc, trader.ccy, tm)
-
+    _report_final_pnl(start_balance, start_btc, trader.balance, trader.btc, trader.ccy, log)
+    return result(df.Date.values, df.Close.values, df.MA.values, df.MA.values + (df.MA_std.values*stds),
+                    df.MA.values - (df.MA_std*stds), [play[0] for play in plays], 
+                    [play[1] for play in plays], [play[2] for play in plays])
+                    
 
 def moving_past_ma(df, lookback, log=True, draw=False):
     df = compute_MA(df, n=lookback)
@@ -268,7 +281,7 @@ def macd_crossing_singal_line(df, log=True, draw=False):
 
             if macd_goes_above_sl and trader.balance > 0 and i < day_entered:  # when to join market
                 trade = trader.buy(day.Close, day.Date, max=True)
-                plays.append(trade.string)
+                plays.append((trade.date, trade.buy_price, 'buy'))
                 start_btc = trade.quantity
                 prev_trade = day
                 day_entered = i
@@ -277,25 +290,28 @@ def macd_crossing_singal_line(df, log=True, draw=False):
                 trade = sell(trader, day, prev_trade, log)
                 if trade.quantity > 0:
                     prev_trade = day
-                    plays.append(trade.string)
+                    plays.append((trade.date, trade.sell_price, 'sell'))
 
             if macd_goes_above_sl and less_than_last_buy and i > day_entered:
                 trade = buy(trader, day, prev_trade, log)
                 if trade.quantity > 0:
                     prev_trade = day
-                    plays.append(trade.string)        
+                    plays.append((trade.date, trade.buy_price, 'buy'))
                 
             if i == len(df)-1 and trader.btc > 0:
                 trade = sell(trader, day, prev_trade, log)
                 if trade.quantity > 0:
                     prev_trade = day
-                    plays.append(trade.string)
+                    plays.append((trade.date, trade.sell_price, 'sell'))
 
-    if log:
+    if False:
         for play in plays:
             print(play)
 
-    return _report_final_pnl(start_balance, start_btc, trader.balance, trader.btc, trader.ccy, log)
+    _report_final_pnl(start_balance, start_btc, trader.balance, trader.btc, trader.ccy, log)
+    
+    return result(df.Date.values, df.Close.values, [play[0] for play in plays],
+                    [play[1] for play in plays], [play[2] for play in plays])
 
 
 def _report_final_pnl(start_balance, start_btc, balance, btc, ccy, log=True):
@@ -317,7 +333,6 @@ def buy(trader, day, prev_trade, tm):
     if trade.quantity > 0:
         if tm:
             wl = win_or_loss(prev_trade.Close, trade.buy_price, trade.quantity, 1)
-            print(', '.join([wl.winloss, wl.pnl, wl.pnlpct]))
             # print(colored(', '.join([wl.winloss, wl.pnl, wl.pnlpct]), wl.colour))
             print('')
     return trade
@@ -327,7 +342,6 @@ def sell(trader, day, prev_trade, tm):
     if trade.quantity > 0:
         if tm:
             wl = win_or_loss(prev_trade.Close, trade.sell_price, trade.quantity, -1)
-            print(', '.join([wl.winloss, wl.pnl, wl.pnlpct]))
             # print(colored(', '.join([wl.winloss, wl.pnl, wl.pnlpct]), wl.colour))
             print('')
     return trade
