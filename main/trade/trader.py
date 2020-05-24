@@ -1,7 +1,7 @@
 from collections import namedtuple
 
-buytuple = namedtuple('BuyTuple', ['new_balance', 'buy_price', 'quantity', 'date', 'string'])
-selltuple = namedtuple('SellTuple', ['new_balance', 'sell_price', 'quantity', 'date', 'string'])
+TradeTuple = namedtuple('Trade', ['action', 'new_balance', 'price', 'quantity', 'date', 'string'])
+
 
 class Trader:
 
@@ -25,7 +25,7 @@ class Trader:
             self.balance = future_balance
             self.btc += quantity
 
-        return buytuple(self.balance, price, quantity, date, 'Bought {}{} at {} on {}'.format(quantity, self.ccy, price, date))
+        return TradeTuple('buy', self.balance, price, quantity, date, 'Bought {}{} at {} on {}'.format(quantity, self.ccy, price, date))
 
     def sell(self, price, date, quantity=0, max=False):
         if quantity > self.btc:
@@ -35,4 +35,4 @@ class Trader:
         self.balance += price*quantity
         self.btc -= quantity
 
-        return selltuple(self.balance, price, quantity, date, 'Sold {}{} at {} on {}'.format(quantity, self.ccy, price, date))
+        return TradeTuple('sell', self.balance, price, quantity, date, 'Sold {}{} at {} on {}'.format(quantity, self.ccy, price, date))

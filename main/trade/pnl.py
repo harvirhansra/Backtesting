@@ -11,10 +11,8 @@ def win_or_loss(s0, s1, quantity, buy_or_sell):
         if quantity > 0:
             if s1 > s0:
                 return wl_tuple('loss', str(-round(pnl, 3)), str(-round(percent, 3))+'%', 'red')
-                # return colored(','.join(['loss', str(-round(pnl, 3)), str(-round(percent, 3))+'%']), 'red')
             else:
                 return wl_tuple('win', str(round(pnl, 3)), str(round(percent, 3))+'%', 'green')
-                # return 
         else:
             return
 
@@ -22,9 +20,7 @@ def win_or_loss(s0, s1, quantity, buy_or_sell):
         if quantity > 0:
             if s0 > s1:
                 return wl_tuple('loss', str(-round(pnl, 3)), str(-round(percent, 3))+'%', 'red')
-                # return colored(','.join(['loss', str(-round(pnl, 3)), str(-round(percent, 3))+'%']), 'red')
             else:
                 return wl_tuple('win', str(round(pnl, 3)), str(round(percent, 3))+'%', 'green')
-                # return colored(','.join(['win', str(round(pnl, 3)), str(round(percent, 3))+'%']), 'green')
         else:
             return

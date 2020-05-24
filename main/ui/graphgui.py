@@ -3,21 +3,21 @@ import sys
 import time
 import numpy as np
 
-from contextlib import redirect_stdout
+sys.path.append('..')
+from trade.calibration_strats import above_under_ma_std_calib
+from trade.simple_strats import macd_crossing_signal_line, above_under_ma_std
+from market.marketdata import get_data_from_csv
+
 from PyQt5 import QtGui
 from PyQt5.QtCore import QThread, QTimer
 from PyQt5.QtWidgets import QPushButton, QLabel, QPlainTextEdit
-
+from contextlib import redirect_stdout
 from matplotlib.figure import Figure
 from matplotlib.pyplot import annotate
-from matplotlib.backends.qt_compat import QtCore, QtWidgets, is_pyqt5
-from matplotlib.backends.backend_qt5agg import (FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
+from matplotlib.backends.qt_compat import QtCore, QtWidgets
+from matplotlib.backends.backend_qt5agg import (
+    FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
-sys.path.append('..')
-
-from market.marketdata import get_data_from_csv
-from trade.simple_strats import macd_crossing_singal_line, above_under_ma_std
-from trade.calibration_strats import above_under_ma_std_calib
 
 class BacktestingGraphs(QtWidgets.QMainWindow):
 
@@ -30,26 +30,28 @@ class BacktestingGraphs(QtWidgets.QMainWindow):
 
         self.log = io.StringIO()
 
-        self._create_graph()
+        self._create_price_graph()
+        # self._create_std_graph()
         self._create_log_box()
         self._start_button()
 
-
-    def _create_graph(self):
-        def _update_graph():
-            self._dynamic_ax.clear()
-            t = np.linspace(0, 10, 101)
-            self._dynamic_ax.plot(t, np.sin(t + time.time()))
-            self._dynamic_ax.figure.canvas.draw()
-
-        dynamic_canvas = FigureCanvas(Figure(figsize=(5, 8), facecolor='#404040'))
-        self.layout.addWidget(dynamic_canvas)
-        self.addToolBar(QtCore.Qt.BottomToolBarArea, NavigationToolbar(dynamic_canvas, self))
-        self._dynamic_ax = dynamic_canvas.figure.subplots()
-        self._format_graph()
+    def _create_price_graph(self):
+        price_canvas = FigureCanvas(Figure(figsize=(50, 80), facecolor='#404040', dpi=80))
+        self.layout.addWidget(price_canvas)
+        self.addToolBar(QtCore.Qt.BottomToolBarArea,
+                        NavigationToolbar(price_canvas, self))
+        self._price_ax = price_canvas.figure.subplots()
+        self._price2_ax = self._price_ax.twinx()
+        self._format_price_graph()
         # self._timer = dynamic_canvas.new_timer(100, [(_update_graph, (), {})])
         # self._timer.start()
 
+    def _create_std_graph(self):
+        std_canvas = FigureCanvas(Figure(figsize=(5, 8), facecolor='#404040'))
+        self.layout.addWidget(std_canvas)
+        # self.addToolBar(QtCore.Qt.BottomToolBarArea, NavigationToolbar(std_canvas, self))
+        self._std_ax = std_canvas.figure.subplots()
+        self._format_std_graph()
 
     def _create_log_box(self):
         def _update_text():
@@ -63,46 +65,58 @@ class BacktestingGraphs(QtWidgets.QMainWindow):
         # self.print_timer.timeout.connect(_update_text)
         # self.print_timer.start(1000)
 
-
     def _start_button(self):
         self.start_button = QPushButton('Start Backtesting')
         self.start_button.clicked.connect(self._start_bt)
         self.layout.addWidget(self.start_button)
 
     def _start_bt(self):
-        print('Starting Backtesting')
-        df = get_data_from_csv('../../resources/BTC_USD_2018-04-05_2020-01-25-CoinDesk.csv')
+        # df = get_data_from_csv('../../resources/BTC_USD_2018-04-05_2020-01-25-CoinDesk.csv')
         # df = get_data_from_csv('../../resources/BTC_USD_2019-07-12_2019-12-30-CoinDesk.csv')
-        # with redirect_stdout(self.log):
-            # bt_result = above_under_ma_std(df, stds=1.5, lookback=14, log=True, draw=False)
-        bt_result = above_under_ma_std_calib(df)
+        df = get_data_from_csv('../../resources/Bitfinex_BTCUSD_1h.csv-new')
+        # with redirect_stdout(self.log): 
+        bt_result = above_under_ma_std(df, lookback=50, std=1.5)
+        # bt_result = above_under_ma_std_calib(df, lookback=20)
         self.print_text.setPlainText(self.log.getvalue())
         self.print_text.moveCursor(QtGui.QTextCursor.End)
-        self._plot_graph(bt_result)
-        self._dynamic_ax.figure.canvas.draw()
+        self._plot_price_graph(bt_result)
+        # self._plot_std_graph(bt_result)
+        self._price_ax.figure.canvas.draw()
+        # self._std_ax.figure.canvas.draw()
 
-    def _format_graph(self):
-        self._dynamic_ax.set_ylabel('price', color ='white')
-        self._dynamic_ax.set_xlabel('date', color='white')
-        self._dynamic_ax.tick_params(axis='x', colors='white')
-        self._dynamic_ax.tick_params(axis='y', colors='white')
-        self._dynamic_ax.set_facecolor('#404040')
+    def _format_price_graph(self):
+        self._price_ax.set_ylabel('price', color='white')
+        self._price2_ax.set_ylabel('std', color='white')
+        self._price_ax.set_xlabel('date', color='white')
+        self._price_ax.tick_params(axis='x', colors='white')
+        self._price_ax.tick_params(axis='y', colors='white', which='both')
+        self._price_ax.set_facecolor('#404040')
 
-    def _plot_graph(self, res):
-        self._dynamic_ax.clear()
-        self._dynamic_ax.plot(res.date, res.price, linewidth=1, color='#53a8b2')
-        self._dynamic_ax.plot(res.date, res.metric1, linewidth=0.8, color='#e9de1c')
-        self._dynamic_ax.plot(res.date, res.metric2, linewidth=0.8, color='#1ce926')
-        self._dynamic_ax.plot(res.date, res.metric3, linewidth=0.8, color='#e91c1c')
+    def _format_std_graph(self):
+        self._std_ax.set_ylabel('std', color='white')
+        self._std_ax.set_xlabel('date', color='white')
+        self._std_ax.tick_params(axis='x', colors='white')
+        self._std_ax.tick_params(axis='y', colors='white')
+        self._std_ax.set_facecolor('#404040')
+
+    def _plot_price_graph(self, res):
+        self._price_ax.clear()
+        self._price_ax.plot(res.date, res.price, linewidth=1.5, color='#53a8b2')
+        self._price_ax.plot(res.date, res.metric1, linewidth=0.8, color='#e9de1c')
+        self._price_ax.plot(res.date, res.metric2, linewidth=0.8, color='#1ce926')
+        self._price_ax.plot(res.date, res.metric3, linewidth=0.8, color='#e91c1c')
+        # self._price2_ax.plot(res.date, res.metric4, linewidth=0.5, color='#ffbdd8')
         for date, price, action in zip(res.actiondate, res.actionprice, res.action):
-            self._dynamic_ax.annotate(action, (date, price), color='white',
-                                        xycoords='data', xytext=(0, 40), 
-                                        textcoords='offset points',
-                                        arrowprops=dict(arrowstyle="->",
-                                                        connectionstyle="arc3",
-                                                        color='white', lw=0.5))
+            self._price_ax.annotate(action, (date, price), color='white',
+                                    xycoords='data', xytext=(0, 40),
+                                    textcoords='offset points',
+                                    arrowprops=dict(arrowstyle="->",
+                                                    connectionstyle="arc3",
+                                                    color='white', lw=0.5))
 
-        
+    def _plot_std_graph(self, res):
+        self._std_ax.clear()
+        self._std_ax.plot(res.date, res.metric4, linewidth=1.5, color='#53a8b2')
 
 if __name__ == "__main__":
     qapp = QtWidgets.QApplication(sys.argv)
