@@ -1,4 +1,3 @@
-import time
 import numpy as np
 
 from collections import namedtuple
@@ -353,41 +352,3 @@ def macd_crossing_signal_line(df, log=True, draw=False):
 
     return result(df.Date.values, df.Close.values, [play[0] for play in plays],
                   [play[1] for play in plays], [play[2] for play in plays])
-
-
-def _report_final_pnl(start_balance, start_btc, balance, btc, ccy, log=True):
-    final_is_usd = balance > 0
-    final = balance if final_is_usd else btc
-    start = start_balance if final_is_usd else start_btc
-    final_ccy = '$' if final_is_usd else ccy
-    pnl = int((final/start)*100 - 100)
-    if pnl > 1000:
-        import pdb
-        pdb.set_trace()
-    if log:
-        print('')
-        print('Starting balance: {}{}'.format(final_ccy, start))
-        print('Final balance: {}{}'.format(final_ccy, final))
-        print('PnL: '+str(pnl)+'%')
-        print('')
-    return pnl
-
-
-def buy(trader, day, prev_trade, tm, quantity=0, max=False):
-    trade = trader.buy(day.Close, day.Date, quantity, max=max)
-    wl = win_or_loss(prev_trade.price, trade.price, trade.quantity, 1)
-    if trade.quantity > 0:
-        if tm:
-            print(colored(', '.join([wl.winloss, wl.pnl, wl.pnlpct]), wl.colour))
-            print('')
-    return trade, wl
-
-
-def sell(trader, day, prev_trade, tm, quantity=0, max=False):
-    trade = trader.sell(day.Close, day.Date, quantity, max=max)
-    wl = win_or_loss(prev_trade.price, trade.price, trade.quantity, -1)
-    if trade.quantity > 0:
-        if tm:
-            print(colored(', '.join([wl.winloss, wl.pnl, wl.pnlpct]), wl.colour))
-            print('')
-    return trade, wl

@@ -1,5 +1,4 @@
 import pandas as pd
-import requests
 
 
 def get_data_from_csv(file_location):
@@ -10,5 +9,7 @@ def get_data_from_csv(file_location):
     df['Open'] = df['Open'].astype(float)
     df['Close'] = df['Close'].astype(float)
     df['Date'] = pd.to_datetime(df['Date'])
+
+    df = df.set_index('Date')
 
     return df
