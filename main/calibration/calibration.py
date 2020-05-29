@@ -1,26 +1,28 @@
 import numpy as np
 
-from threading import Thread
 from collections import namedtuple
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from trade.simple_strats import above_under_ma_std
 
 calib_result = namedtuple('calib_result', ['best_std', 'best_pnl'])
 
 
-def calibrate_std(df, prev_trade, threaded=False):
+def calibrate_std(df, prev_trade, multi=False):
     results = {}
     stds = list(np.arange(0, 3.25, 0.25))
     slice = df.copy().reset_index(drop=True)
 
-    if threaded:
-        threads = []
-        for std in stds:
-            thread = Thread(target=_store_in_dict, args=(results, std, above_under_ma_std, slice, std, 14, False))
-            threads.append(thread)
-            thread.start()
-
-        for thread in threads:
-            thread.join()
+    if multi:
+        with ProcessPoolExecutor(2) as ex:
+            ps = {ex.submit(above_under_ma_std, slice, std, lookback=14, log=False, draw=False, calib=True, prev_trade=prev_trade): std for std in stds}
+            for p in as_completed(ps):
+                try:
+                    k, v = ps.result()
+                except Exception:
+                    pass
+                    # print(f"{futures[]} throws {e}")
+                else:
+                    results[k] += v
     else:
         for std in stds:
             results[std] = above_under_ma_std(slice, std, lookback=14, log=False, draw=False, calib=True, prev_trade=prev_trade)

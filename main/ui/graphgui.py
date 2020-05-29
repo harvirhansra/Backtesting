@@ -71,12 +71,13 @@ class BacktestingGraphs(QtWidgets.QMainWindow):
         self.layout.addWidget(self.start_button)
 
     def _start_bt(self):
-        # df = get_data_from_csv('../../resources/BTC_USD_2018-04-05_2020-01-25-CoinDesk.csv')
+        df = get_data_from_csv('../../resources/BTC_USD_2018-07-01_2020-05-23_Gemini_Daily.csv')
         # df = get_data_from_csv('../../resources/BTC_USD_2019-07-12_2019-12-30-CoinDesk.csv')
-        df = get_data_from_csv('../../resources/Bitfinex_BTCUSD_1h.csv-new')
+        # df = get_data_from_csv('../../resources/Bitfinex_BTCUSD_1h.csv-new')
         # with redirect_stdout(self.log): 
-        bt_result = above_under_ma_std(df, lookback=50, std=1.5)
-        # bt_result = above_under_ma_std_calib(df, lookback=20)
+        # bt_result = above_under_ma_std(df, lookback=14, std=1.5)
+        bt_result = above_under_ma_std_calib(df, lookback=14)
+        # bt_result = macd_crossing_signal_line(df)
         self.print_text.setPlainText(self.log.getvalue())
         self.print_text.moveCursor(QtGui.QTextCursor.End)
         self._plot_price_graph(bt_result)
@@ -117,6 +118,7 @@ class BacktestingGraphs(QtWidgets.QMainWindow):
     def _plot_std_graph(self, res):
         self._std_ax.clear()
         self._std_ax.plot(res.date, res.metric4, linewidth=1.5, color='#53a8b2')
+
 
 if __name__ == "__main__":
     qapp = QtWidgets.QApplication(sys.argv)

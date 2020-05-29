@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 
+from market.marketdata import get_data_from_csv
 
 def compute_RSI(df, n=14):
     df.set_index
@@ -60,3 +61,19 @@ def compute_MACD(df):
 
 def compute_SAR():
     pass
+
+
+def compute_sharpe_ratio(strat_return, period_start, period_end):
+    """
+    Daily timestamps. Hourly was not available.
+    """
+    index = pd.read_csv('../../resources/CRIX_USD_2015-01-01_2020-05-23_Daily.csv')
+    index.Date = pd.to_datetime(index.Date)
+    index.Price = index.Price.astype(float)
+    index = index[index.Date.between(period_start, period_end)]
+    index_return = index.Price.pct_change(periods=1).fillna(0).values
+
+    mean = np.mean(strat_return - index_return)
+    variance = np.var(strat_return - index_return)
+
+    return mean / np.sqrt(variance)

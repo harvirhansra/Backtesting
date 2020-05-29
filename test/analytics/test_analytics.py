@@ -1,7 +1,12 @@
+import sys
 import pytest
+import numpy as np
 import pandas as pd
 
-from analytics.analytics import compute_RSI
+from pandas._testing import assert_frame_equal
+
+sys.path.append('../../main')
+from analytics.analytics import compute_RSI, compute_sharpe_ratio
 
 
 def test_compute_RSI():
@@ -54,7 +59,15 @@ def test_compute_RSI():
                                         58.17694369973191]
                                 })
     df = compute_RSI(df)
-    for x in expected_df.columns.tolist():
-        df[x] == expected_df[x]
+    assert_frame_equal(df, expected_df, check_dtype=False)
 
-    assert all(df[x] == expected_df[x] for x in expected_df.columns.tolist())
+
+def test_compute_sharpe_ratio():
+    start = pd.Timestamp(2019, 4, 5)
+    end = pd.Timestamp(2019, 7, 5)
+    returns = np.zeros(92)
+    returns[5] = 20
+    returns[34] = 10
+    returns[80] = 10
+    sharpe = compute_sharpe_ratio(returns, start, end)
+    assert abs(sharpe - 0.16923451305235063) < 0.0001

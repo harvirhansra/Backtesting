@@ -3,25 +3,12 @@ import pandas as pd
 
 from market.marketdata import get_data_from_csv
 from trade.calibration_strats import above_under_ma_std_calib
-from trade.simple_strats import above_under_ma_std, macd_crossing_singal_line
+from trade.simple_strats import above_under_ma_std, macd_crossing_signal_line
 
 
 def main():
-    df1 = get_data_from_csv('../resources/BTC_USD_2018-07-14_2019-07-13-CoinDesk.csv')
-
-    df2 = get_data_from_csv('../resources/BTC_USD_2019-07-12_2019-12-30-CoinDesk.csv')
-
-    df3 = get_data_from_csv('../resources/BTC_USD_2019-11-30_2019-12-31-CoinDesk.csv')
-
-    df4 = get_data_from_csv('../resources/ETH_USD_2018-04-05_2020-01-25-CoinDesk.csv')
-
-    df5 = get_data_from_csv('../resources/BTC_USD_2018-04-05_2020-01-25-CoinDesk.csv')
-
-    df6 = pd.read_csv('../resources/BTC_USD_2020-01-22_2020-01-27_Hourly.csv')
-    df6['Low'].astype(float)
-    df6['High'].astype(float)
-    df6.loc[:, 'Currency'] = 'BTC'
-    df6['Date'] = pd.to_datetime(df6['Timestamp'])
+    # df = get_data_from_csv('../resources/BTC_USD_2015-10-08_2020-05-23_Gemini_Daily.csv')
+    df = get_data_from_csv('../resources/BTC_USD_2018-07-01_2020-05-23_Gemini_Daily.csv')
 
     from pandas.plotting import register_matplotlib_converters
     register_matplotlib_converters()
@@ -29,8 +16,8 @@ def main():
     start = time.time()
 
     # macd_crossing_singal_line(df1, log=True, draw=False)
-    above_under_ma_std_calib(df1, lookback=14, log=True, draw=False, threaded=False)
-    # above_under_ma_std(df1, std=1.5, log=True, draw=False)
+    above_under_ma_std_calib(df, lookback=14, log=True, draw=False, multi=False)
+    # above_under_ma_std(df, std=1, lookback=14, log=True, draw=False)
 
     exec_time = time.time() - start
     print(f'Backtesting ran for {exec_time} seconds')

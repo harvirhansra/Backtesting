@@ -7,7 +7,7 @@ from termcolor import colored
 from trade.trader import Trader, TradeTuple
 from trade.pnl import win_or_loss
 from ui.graphdrawer import draw_terminal
-from analytics.analytics import compute_RSI, compute_MA, compute_MACD
+from analytics.analytics import compute_RSI, compute_MA, compute_MACD, compute_sharpe_ratio
 
 result = namedtuple('result', ['date', 'price', 'metric1', 'metric2', 'metric3', 'metric4', 'actiondate', 'actionprice', 'action'])
 
@@ -161,6 +161,7 @@ def above_under_ma_std(df, std=2, lookback=14, log=True, draw=False, calib=False
     
     start_btc = trader.btc
     start_balance = trader.balance
+    df['pct_change'] = np.zeros(len(df))
 
     start_day = (2*lookback - 2) if not calib else 0  # if df is coming from calibration then all trades will have MA and MA_std so we can start from 0
 
@@ -196,12 +197,14 @@ def above_under_ma_std(df, std=2, lookback=14, log=True, draw=False, calib=False
                 if trade.quantity > 0:
                     prev_trade = trade
                     plays.append((trade.date, trade.price, 'sell, '+wl.pnlpct))
+                    df.at[i, 'pct_change'] = float(wl.pnlpct.replace('%', ''))
 
             if went_above_ma_std and (not less_than_last_buy) and trader.btc > 0 and market_entered:
                 trade, wl = sell(trader, day, prev_trade, draw, max=True)
                 if trade.quantity > 0:
                     prev_trade = trade
                     plays.append((trade.date, trade.price, 'sell, +'+wl.pnlpct))
+                    df.at[i, 'pct_change'] = float(wl.pnlpct.replace('%', ''))
 
             if went_below_ma_std and (not greater_than_last_sell) and trader.balance > 0 and market_entered:
                 trade, wl = buy(trader, day, prev_trade, draw, max=True)
@@ -215,6 +218,7 @@ def above_under_ma_std(df, std=2, lookback=14, log=True, draw=False, calib=False
                 if trade.quantity > 0:
                     prev_trade = trade
                     plays.append((trade.date, trade.price, 'sell, '+wl.pnlpct))
+                    df.at[i, 'pct_change'] = float(wl.pnlpct.replace('%', ''))
 
             # sell or buy final amount so PnL is calculated correctly for calibration
             if i == len(df)-1 and trader.balance > 0 and start_balance == 0 and calib:
@@ -222,12 +226,14 @@ def above_under_ma_std(df, std=2, lookback=14, log=True, draw=False, calib=False
                 if trade.quantity > 0:
                     prev_trade = trade
                     plays.append((trade.date, trade.price, 'buy, '+wl.pnlpct))
+                    df.at[i, 'pct_change'] = float(wl.pnlpct.replace('%', ''))
 
             if i == len(df)-1 and trader.btc > 0 and start_btc == 0 and calib:
                 trade, wl = sell(trader, day, prev_trade, draw, max=True)
                 if trade.quantity > 0:
                     prev_trade = trade
                     plays.append((trade.date, trade.price, 'sell, '+wl.pnlpct))
+                    df.at[i, 'pct_change'] = float(wl.pnlpct.replace('%', ''))
 
     if draw:
         for play in plays:
@@ -236,6 +242,9 @@ def above_under_ma_std(df, std=2, lookback=14, log=True, draw=False, calib=False
     if calib:
         return _report_final_pnl(start_balance, start_btc, trader.balance, trader.btc, trader.ccy, log), len(plays), std
 
+    df = df.iloc[start_day:]
+    sharpe = compute_sharpe_ratio(df['pct_change'].values, df.iloc[0].Date, df.iloc[-1].Date)
+    print(f"Sharpe: {sharpe}")
     _report_final_pnl(start_balance, start_btc, trader.balance, trader.btc, trader.ccy, log)
     return result(df.Date.values, df.Close.values, df.MA.values, df.MA.values + (df.MA_std.values*std),
                   df.MA.values - (df.MA_std*std), df.MA_std, [play[0] for play in plays],
