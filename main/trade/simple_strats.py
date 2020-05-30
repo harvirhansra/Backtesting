@@ -191,13 +191,6 @@ def above_under_ma_std(df, std=2, lookback=14, log=True, draw=False, calib=False
                 prev_trade = trade
                 market_entered = True
 
-            if pct_less_than_last_buy and went_below_ma_std and trader.btc > 0 and market_entered and False:
-                trade, wl = sell(trader, day, prev_trade, log, max=True)
-                if trade.quantity > 0:
-                    prev_trade = trade
-                    plays.append((trade.date, trade.price, 'sell, '+wl.pnlpct))
-                    df.at[i, 'pct_change'] = float(wl.pnlpct.replace('%', ''))
-
             if went_above_ma_std and (not less_than_last_buy) and trader.btc > 0 and market_entered:
                 trade, wl = sell(trader, day, prev_trade, draw, max=True)
                 if trade.quantity > 0:

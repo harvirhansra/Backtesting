@@ -67,7 +67,7 @@ def compute_sharpe_ratio(strat_return, period_start, period_end):
     """
     Daily timestamps. Hourly was not available.
     """
-    index = pd.read_csv('../../resources/CRIX_USD_2015-01-01_2020-05-23_Daily.csv')
+    index = pd.read_csv('../resources/CRIX_USD_2015-01-01_2020-05-23_Daily.csv')
     index.Date = pd.to_datetime(index.Date)
     index.Price = index.Price.astype(float)
     index = index[index.Date.between(period_start, period_end)]
