@@ -19,7 +19,6 @@ def main():
     # above_under_ma_std_calib(df, lookback=14, log=True, draw=False, multi=False)
     # above_under_ma_std(df, std=1, lookback=14, log=True, draw=False)
     strat = AboveUnderMAStd(df, 'BTC')
-    strat.run()
 
     exec_time = time.time() - start
     print(f'Backtesting ran for {exec_time} seconds')

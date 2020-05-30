@@ -233,7 +233,6 @@ def above_under_ma_std(df, std=2, lookback=14, log=True, draw=False, calib=False
 
     if calib:
         return _report_final_pnl(start_balance, start_btc, trader.balance, trader.btc, trader.ccy, log), len(plays), std
-
     df = df.iloc[start_day:]
     sharpe = compute_sharpe_ratio(df['pct_change'].values, df.iloc[0].Date, df.iloc[-1].Date)
     print(f"Sharpe: {sharpe}")
