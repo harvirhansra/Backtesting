@@ -1,14 +1,10 @@
 import io
 import sys
-import time
-import numpy as np
 
 from PyQt5 import QtGui
-from PyQt5.QtCore import QThread, QTimer
-from PyQt5.QtWidgets import QPushButton, QLabel, QPlainTextEdit
-from contextlib import redirect_stdout
+from PyQt5.QtCore import QRunnable, QThreadPool, QTimer
+from PyQt5.QtWidgets import QPushButton, QPlainTextEdit
 from matplotlib.figure import Figure
-from matplotlib.pyplot import annotate
 from matplotlib.backends.qt_compat import QtCore, QtWidgets
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
@@ -29,6 +25,9 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         # self._create_std_graph()
         self._create_log_box()
         self._start_button()
+
+        self.threadpool = QThreadPool()
+        # self.threadpool.setMaxThreadCount(2)
 
     def _create_price_graph(self):
         price_canvas = FigureCanvas(Figure(figsize=(50, 80), facecolor='#404040', dpi=80))
@@ -53,10 +52,11 @@ class BacktestingGUI(QtWidgets.QMainWindow):
 
         self.print_text = QPlainTextEdit()
         self.print_text.setReadOnly(True)
+        self.print_text.setMinimumHeight(80)
         self.layout.addWidget(self.print_text)
-        # self.print_timer = QTimer()
-        # self.print_timer.timeout.connect(_update_text)
-        # self.print_timer.start(1000)
+        self.print_timer = QTimer()
+        self.print_timer.timeout.connect(_update_text)
+        self.print_timer.start(1000)
 
     def _start_button(self):
         self.start_button = QPushButton('Start Backtesting')
@@ -64,7 +64,9 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         self.layout.addWidget(self.start_button)
 
     def _start_bt(self):
-        self.run_function()
+        sys.stdout = self.log
+        worker = Worker(self.run_func)
+        self.threadpool.start(worker)
         self.print_text.setPlainText(self.log.getvalue())
         self.print_text.moveCursor(QtGui.QTextCursor.End)
         # self._std_ax.figure.canvas.draw()
@@ -85,7 +87,7 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         self._std_ax.set_facecolor('#404040')
 
     def plot_price_graph(self, dates, price, plays, metric1, metric2, metric3):
-        self._price_ax.clear()
+        self._price_ax.cla()
         self._price_ax.plot(dates, price, linewidth=1.5, color='#53a8b2')
         self._price_ax.plot(dates, metric1, linewidth=0.8, color='#e9de1c')
         self._price_ax.plot(dates, metric2, linewidth=0.8, color='#1ce926')
@@ -105,8 +107,11 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         self._std_ax.plot(res.date, res.metric4, linewidth=1.5, color='#53a8b2')
 
 
-if __name__ == "__main__":
-    qapp = QtWidgets.QApplication(sys.argv)
-    app = BacktestingGraphs()
-    app.show()
-    qapp.exec_()
+class Worker(QRunnable):
+
+    def __init__(self, func):
+        super(Worker, self).__init__()
+        self.func = func
+        
+    def run(self):
+        self.func()

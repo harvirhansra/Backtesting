@@ -14,8 +14,8 @@ from analytics.analytics import compute_sharpe_ratio, compute_MA
 
 class Strategery(object):
 
-    def __init__(self, market_df, currency, initial_balance=10000, terminal_mode=False):
-        self.tm = terminal_mode  # if true  , coloured printing and terminal plotting
+    def __init__(self, market_df, currency, initial_balance=10000, log=True):
+        self.log = log
 
         self.df = market_df
         self.df['pct_change'] = np.zeros(len(self.df))
@@ -41,9 +41,9 @@ class Strategery(object):
             if len(self.plays) == 1:
                 self.start_btc = trade.quantity
                 self.market_entered = True
-            if self.tm:
-                print(colored(', '.join([wl.winloss, wl.pnl, wl.pnlpct]), wl.colour))
-
+            if self.log and not first:
+                print(', '.join([wl.winloss, '$'+wl.pnl, str(wl.pnlpct)+'%']))
+                
     def sell(self, date, day, quantity=0, max=False):
         trade = self.trader.sell(day.Close, date, quantity, max=max)
         wl = win_or_loss(self.prev_trade.price, trade.price, trade.quantity, -1)
@@ -51,30 +51,28 @@ class Strategery(object):
             self.prev_trade = trade
             self.plays.append((trade.date, trade.price, 'sell, '+str(wl.pnlpct)+'%'))
             self.df.at[date, 'pct_change'] = wl.pnlpct
-            if self.tm:
-                print(colored(', '.join([wl.winloss, wl.pnl, wl.pnlpct]), wl.colour))
+            if self.log:
+                print(', '.join([wl.winloss, '$'+wl.pnl, str(wl.pnlpct)+'%']))
 
     def report(self):
-        report_final_pnl(self.start_balance, self.start_btc, self.trader.balance, self.trader.btc, self.currency)
+        report_final_pnl(self.start_balance, self.start_btc, self.trader.balance, self.trader.btc, self.currency, self.log)
         sharpe_df = self.df.loc[self.start_date:]
         sharpe = compute_sharpe_ratio(sharpe_df['pct_change'].values, sharpe_df.index[0], sharpe_df.index[-1])
-        print(f'Sharpe ratio: {sharpe}')
+        if self.log:
+            print(f'Sharpe ratio: {sharpe}')
 
     def enrich_market_df(self):
         return self.df
 
-    def run(self):
-        return
-
 
 class AboveUnderMAStd(Strategery):
 
-    def __init__(self, *args, **kwargs):
-        Strategery.__init__(self, *args, **kwargs)
+    def __init__(self, market_df, currency, initial_balance, log, std, lookback, calib=False):
+        Strategery.__init__(self, market_df, currency, initial_balance, log)
 
-        self.std = 1
-        self.lookback = 14
-        self.calib = False
+        self.std = std
+        self.lookback = lookback
+        self.calib = calib
         self.prev_day = None
         self.prev_trade = None
         self.start_day = (2*self.lookback - 2) if not self.calib else 0
@@ -82,10 +80,10 @@ class AboveUnderMAStd(Strategery):
 
         qapp = QApplication(sys.argv)
         self.gui = BacktestingGUI()
+        self.gui.run_func = self.run
         self.gui.show()
-        self.gui.run_function = self.run()
         qapp.exec_()
-
+        
     def update_graph(self, date, price, plays, metric1, metric2, metric3):
         self.gui.plot_price_graph(date, price, plays, metric1, metric2, metric3)
 
@@ -94,7 +92,7 @@ class AboveUnderMAStd(Strategery):
 
     def run(self):
         self.enrich_market_df()
-
+        
         for i, day in islice(self.df.iterrows(), self.start_day, None):
             self.prev_day = self.df.loc[i-pd.Timedelta(days=1)]
 
@@ -119,11 +117,10 @@ class AboveUnderMAStd(Strategery):
             if went_below_ma_std and (not greater_than_last_sell) and self.trader.balance > 0 and self.market_entered:
                 self.buy(i, day, max=True)
             
-            if self.gui:
-                self.update_graph(self.df.index.values, self.df.Close[:i], self.plays,
-                                  self.df.MA[:i].values,
-                                  (self.df.MA[:i].values + self.std*self.df.MA_std[:i].values),
-                                  (self.df.MA[:i].values - self.std*self.df.MA_std[:i].values))
+            self.update_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays,
+                              self.df.MA[:i].values,
+                              (self.df.MA[:i].values + self.std*self.df.MA_std[:i].values),
+                              (self.df.MA[:i].values - self.std*self.df.MA_std[:i].values))
 
         # if btc is held at the end of the market data, then sell for USD to get USD PnL
         if self.trader.btc > 0 and (not self.calib):

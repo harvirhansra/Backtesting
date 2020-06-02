@@ -18,7 +18,7 @@ def main():
     # macd_crossing_singal_line(df1, log=True, draw=False)
     # above_under_ma_std_calib(df, lookback=14, log=True, draw=False, multi=False)
     # above_under_ma_std(df, std=1, lookback=14, log=True, draw=False)
-    strat = AboveUnderMAStd(df, 'BTC')
+    strat = AboveUnderMAStd(df, 'BTC', 10000, log=True, std=1, lookback=14)
 
     exec_time = time.time() - start
     print(f'Backtesting ran for {exec_time} seconds')
