@@ -2,14 +2,13 @@ import sys
 import numpy as np
 import pandas as pd
 
-from PyQt5.QtWidgets import QApplication
 from itertools import islice
-from termcolor import colored
+from PyQt5.QtWidgets import QApplication
 
 from trade.trader import Trader
-from trade.pnl import win_or_loss, report_final_pnl
 from ui.graphgui import BacktestingGUI
-from analytics.analytics import compute_sharpe_ratio, compute_MA
+from trade.pnl import win_or_loss, report_final_pnl
+from analytics.analytics import compute_sharpe_ratio, compute_MA, compute_MACD
 
 
 class Strategery(object):
@@ -19,6 +18,8 @@ class Strategery(object):
 
         self.df = market_df
         self.df['pct_change'] = np.zeros(len(self.df))
+        self.df['drawdown_pct'] = np.zeros(len(self.df))
+        self.df['equity'] = np.full((len(self.df), 1), initial_balance, dtype=int)
 
         self.currency = currency
         self.trader = Trader(initial_balance, currency)
@@ -29,20 +30,17 @@ class Strategery(object):
         self.start_balance = self.trader.balance
 
         self.plays = []
+        self.equity = []
         self.market_entered = False
 
-    def buy(self, date, day, quantity=0, max=False, first=False):
+    def buy(self, date, day, quantity=0, max=False):
         trade = self.trader.buy(day.Close, date, quantity, max=max)
-        if not first:
-            wl = win_or_loss(self.prev_trade.price, trade.price, trade.quantity, 1)
         if trade.quantity > 0:
             self.plays.append((trade.date, trade.price, 'buy'))
             self.prev_trade = trade
             if len(self.plays) == 1:
                 self.start_btc = trade.quantity
                 self.market_entered = True
-            if self.log and not first:
-                print(', '.join([wl.winloss, '$'+wl.pnl, str(wl.pnlpct)+'%']))
                 
     def sell(self, date, day, quantity=0, max=False):
         trade = self.trader.sell(day.Close, date, quantity, max=max)
@@ -67,32 +65,33 @@ class Strategery(object):
 
 class AboveUnderMAStd(Strategery):
 
-    def __init__(self, market_df, currency, initial_balance, log, std, lookback, calib=False):
+    def __init__(self, market_df, currency, initial_balance, log, ui, std, lookback, calib=False):
         Strategery.__init__(self, market_df, currency, initial_balance, log)
 
         self.std = std
         self.lookback = lookback
+
+        self.ui = ui
+
         self.calib = calib
         self.prev_day = None
         self.prev_trade = None
         self.start_day = (2*self.lookback - 2) if not self.calib else 0
         self.start_date = self.df.index[self.start_day]
 
-        qapp = QApplication(sys.argv)
-        self.gui = BacktestingGUI()
-        self.gui.run_func = self.run
-        self.gui.show()
-        qapp.exec_()
-        
-    def update_graph(self, date, price, plays, metric1, metric2, metric3):
-        self.gui.plot_price_graph(date, price, plays, metric1, metric2, metric3)
-
+        if self.ui:
+            qapp = QApplication(sys.argv)
+            self.gui = BacktestingGUI()
+            self.gui.run_func = self.run
+            self.gui.show()
+            qapp.exec_()
+   
     def enrich_market_df(self):
         self.df = compute_MA(self.df, self.lookback)
 
     def run(self):
         self.enrich_market_df()
-        
+
         for i, day in islice(self.df.iterrows(), self.start_day, None):
             self.prev_day = self.df.loc[i-pd.Timedelta(days=1)]
 
@@ -109,18 +108,27 @@ class AboveUnderMAStd(Strategery):
                 and self.prev_day.Close > (day.MA-(self.std*day.MA_std))
 
             if went_below_ma_std and self.trader.balance > 0 and not self.market_entered:  # when to join market
-                self.buy(i, day, max=True, first=True)
+                self.buy(i, day, max=True)
 
             if went_above_ma_std and (not less_than_last_buy) and self.trader.btc > 0 and self.market_entered:
                 self.sell(i, day, max=True)
 
             if went_below_ma_std and (not greater_than_last_sell) and self.trader.balance > 0 and self.market_entered:
                 self.buy(i, day, max=True)
-            
-            self.update_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays,
-                              self.df.MA[:i].values,
-                              (self.df.MA[:i].values + self.std*self.df.MA_std[:i].values),
-                              (self.df.MA[:i].values - self.std*self.df.MA_std[:i].values))
+
+            # if went_below_ma_std and self.trader.balance > 0 and self.market_entered:
+            #    self.buy(i, day, max=True)
+
+            self.df.at[i, 'equity'] = self.trader.balance + (self.trader.btc * day.Close)
+            # self.df.at[i, 'drawdown_pct'] = -(self.df.loc[i].equity / max(self.df.equity[self.start_date:i])) * 100
+
+            if self.ui:
+                self.gui.plot_price_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays,
+                                          self.df.MA[:i].values,
+                                          (self.df.MA[:i].values + self.std*self.df.MA_std[:i].values),
+                                          (self.df.MA[:i].values - self.std*self.df.MA_std[:i].values))
+                self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
+                # self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
 
         # if btc is held at the end of the market data, then sell for USD to get USD PnL
         if self.trader.btc > 0 and (not self.calib):
@@ -131,6 +139,66 @@ class AboveUnderMAStd(Strategery):
             self.buy(i, day, max=True)
 
         if self.trader.btc > 0 and self.start_btc == 0 and self.calib:
+            self.sell(i, day, max=True)
+
+        self.report()
+
+
+class MACD(Strategery):
+
+    def __init__(self, market_df, currency, initial_balance, log, ui):
+        Strategery.__init__(self, market_df, currency, initial_balance, log)
+
+        self.ui = ui
+
+        self.prev_day = None
+        self.prev_trade = None
+        self.start_day = 27
+        self.start_date = self.df.index[self.start_day]
+
+        if self.ui:
+            qapp = QApplication(sys.argv)
+            self.gui = BacktestingGUI()
+            self.gui.run_func = self.run
+            self.gui.show()
+            qapp.exec_()
+   
+    def enrich_market_df(self):
+        self.df = compute_MACD(self.df)
+
+    def run(self):
+        self.enrich_market_df()
+
+        for i, day in islice(self.df.iterrows(), self.start_day, None):
+            self.prev_day = self.df.loc[i-pd.Timedelta(days=1)]
+
+            if self.market_entered:
+                less_than_last_buy = day.Close < self.prev_trade.price
+                greater_than_last_sell = day.Close > self.prev_trade.price
+            else:
+                less_than_last_buy = False
+                greater_than_last_sell = False
+
+            macd_goes_below_sl = day.MACD < day.SL and self.prev_day.MACD >= day.SL
+            macd_goes_above_sl = day.MACD > day.SL and self.prev_day.MACD <= day.SL
+
+            if macd_goes_above_sl and less_than_last_buy:
+                self.buy(i, day, max=True)
+
+            if macd_goes_below_sl and greater_than_last_sell and self.market_entered:
+                self.sell(i, day, max=True)
+
+            self.df.at[i, 'equity'] = self.trader.balance + (self.trader.btc * day.Close)
+            # self.df.at[i, 'drawdown_pct'] = -(self.df.loc[i].equity / max(self.df.equity[self.start_date:i])) * 100
+
+            if self.ui:
+                self.gui.plot_price_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays,
+                                          self.df.MACD[:i], self.df.SL[:i])
+                self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
+                # self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
+
+        # if btc is held at the end of the market data, then sell for USD to get USD PnL
+        if self.trader.btc > 0:
             self.sell(i, day, max=True)
 
         self.report()
