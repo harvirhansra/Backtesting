@@ -12,8 +12,11 @@ from matplotlib.backends.backend_qt5agg import (
 
 class BacktestingGUI(QtWidgets.QMainWindow):
 
-    def __init__(self):
+    def __init__(self, strat_type):
         super().__init__()
+
+        self.strat_type = strat_type
+
         self.resize(1000, 500)
         self._main = QtWidgets.QWidget()
 
@@ -44,10 +47,11 @@ class BacktestingGUI(QtWidgets.QMainWindow):
     def _create_price_graph(self, section):
         price_canvas = FigureCanvas(Figure(figsize=(25, 40), facecolor='#404040', dpi=80))
         section.addWidget(price_canvas)
-        self.addToolBar(QtCore.Qt.BottomToolBarArea,
-                        NavigationToolbar(price_canvas, self))
+        # self.addToolBar(QtCore.Qt.BottomToolBarArea,
+        #                 NavigationToolbar(price_canvas, self))
         self._price_ax = price_canvas.figure.subplots()
-        # self._price2_ax = self._price_ax.twinx()
+        if self.strat_type in ('MACD',):
+            self._price_ax2 = self._price_ax.twinx()
         self._format_price_graph()
 
     def _create_equity_graph(self, section):
@@ -61,12 +65,6 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         section.addWidget(drawdown_canvas)
         self._drawdown_ax = drawdown_canvas.figure.subplots()
         self._format_drawdown_graph()
-
-    def _create_std_graph(self, section):
-        std_canvas = FigureCanvas(Figure(figsize=(5, 8), facecolor='#404040'))
-        section.addWidget(std_canvas)
-        self._std_ax = std_canvas.figure.subplots()
-        self._format_std_graph()
 
     def _create_log_box(self, section):
         def _update_text():
@@ -93,7 +91,10 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         
     def _format_price_graph(self):
         self._price_ax.set_ylabel('price', color='white')
-        # self._price2_ax.set_ylabel('std', color='white')
+        if self.strat_type in ('MACD',):
+            self._price_ax2.set_ylabel('MACD', color='white')
+            self._price_ax2.tick_params(axis='x', colors='white')
+            self._price_ax2.tick_params(axis='y', colors='white', which='both')
         self._price_ax.set_xlabel('date', color='white')
         self._price_ax.tick_params(axis='x', colors='white')
         self._price_ax.tick_params(axis='y', colors='white', which='both')
@@ -120,13 +121,18 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         self._std_ax.tick_params(axis='y', colors='white')
         self._std_ax.set_facecolor('#404040')
 
-    def plot_price_graph(self, dates, price, plays, metric1, metric2):
+    def plot_price_graph(self, dates, price, plays, metric1=None, metric2=None, metric3=None):
         self._price_ax.cla()
-        self._price_ax.plot(dates, price, linewidth=1.5, color='#53a8b2')
-        self._price_ax.plot(dates, metric1, linewidth=0.8, color='#e9de1c')
-        self._price_ax.plot(dates, metric2, linewidth=0.8, color='#1ce926')
-        # self._price_ax.plot(dates, metric3, linewidth=0.8, color='#e91c1c')
-        # self._price2_ax.plot(res.date, res.metric4, linewidth=0.5, color='#ffbdd8')
+        self._price_ax.plot(dates, price, linewidth=1.5, color='#53a8b2', label='Price')
+        if self.strat_type in ('MA',):
+            self._price_ax.plot(dates, metric1, linewidth=0.8, color='#e9de1c', label='MA')
+            self._price_ax.plot(dates, metric2, linewidth=0.8, color='#1ce926', label='MA+std')
+            self._price_ax.plot(dates, metric3, linewidth=0.8, color='#e91c1c', label='MA-std')
+        elif self.strat_type in ('MACD',):
+            self._price_ax2.plot(dates, metric1, linewidth=0.8, color='#e9de1c', label='MACD')
+            self._price_ax2.plot(dates, metric2, linewidth=0.8, color='#9d6fff', label='Signal Line')
+            # self._price_ax2.legend()
+        # self._price_ax.legend()
         for date, price, action in plays:
             self._price_ax.annotate(action, (date, price), color='white',
                                     xycoords='data', xytext=(0, 40),
@@ -138,17 +144,14 @@ class BacktestingGUI(QtWidgets.QMainWindow):
 
     def plot_equity_graph(self, dates, equity):
         self._equity_ax.cla()
-        self._equity_ax.plot(dates, equity, linewidth=1.5, color='white')
+        self._equity_ax.plot(dates, equity, linewidth=1.5, color='white', label='Equity')
+        self._equity_ax.legend()
         self._equity_ax.figure.canvas.draw()
     
     def plot_drawdown_graph(self, dates, drawdown):
         self._drawdown_ax.cla()
-        self._drawdown_ax.plot(dates, drawdown, linewidth=1.5, color='white')
+        self._drawdown_ax.plot(dates, drawdown, linestyle='--', marker='o', linewidth=1.5, color='white')
         self._drawdown_ax.figure.canvas.draw()
-
-    def _plot_std_graph(self, res):
-        self._std_ax.clear()
-        self._std_ax.plot(res.date, res.metric4, linewidth=1.5, color='#53a8b2')
 
 
 class Worker(QRunnable):

@@ -54,7 +54,7 @@ def compute_EMA(df, n=14):
 def compute_MACD(df):
     df['EMA26'] = df.Close.ewm(span=26).mean()
     df['EMA12'] = df.Close.ewm(span=12).mean()
-    df['MACD'] = df.EMA26 - df.EMA12
+    df['MACD'] = df.EMA12.values - df.EMA26.values
     df['SL'] = df.MACD.ewm(span=9).mean()  # signal line
     return df
 

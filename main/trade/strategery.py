@@ -47,17 +47,23 @@ class Strategery(object):
         wl = win_or_loss(self.prev_trade.price, trade.price, trade.quantity, -1)
         if trade.quantity > 0:
             self.prev_trade = trade
-            self.plays.append((trade.date, trade.price, 'sell, '+str(wl.pnlpct)+'%'))
+            self.plays.append((trade.date, trade.price, 'sell, '+str(wl.pnlpct)+'%', wl.winloss))
             self.df.at[date, 'pct_change'] = wl.pnlpct
             if self.log:
-                print(', '.join([wl.winloss, '$'+wl.pnl, str(wl.pnlpct)+'%']))
+                print(', '.join([str(date), wl.winloss, '$'+wl.pnl, str(wl.pnlpct)+'%']))
 
     def report(self):
         report_final_pnl(self.start_balance, self.start_btc, self.trader.balance, self.trader.btc, self.currency, self.log)
-        sharpe_df = self.df.loc[self.start_date:]
-        sharpe = compute_sharpe_ratio(sharpe_df['pct_change'].values, sharpe_df.index[0], sharpe_df.index[-1])
+        longs = len([play for play in self.plays if len(play) == 4])
+        wins = len([play for play in self.plays if len(play) == 4 and play[-1]=='win'])
+        losses = len([play for play in self.plays if len(play) == 4 and play[-1]=='loss'])
+        # sharpe_df = self.df.loc[self.start_date:]
+        # sharpe = compute_sharpe_ratio(sharpe_df['pct_change'].values, sharpe_df.index[0], sharpe_df.index[-1])
         if self.log:
-            print(f'Sharpe ratio: {sharpe}')
+            print(f'Long plays: {longs}')
+            print(f'Wins: {wins}')
+            print(f'Loses: {losses}')
+            #print(f'Sharpe ratio: {sharpe}')
 
     def enrich_market_df(self):
         return self.df
@@ -81,7 +87,7 @@ class AboveUnderMAStd(Strategery):
 
         if self.ui:
             qapp = QApplication(sys.argv)
-            self.gui = BacktestingGUI()
+            self.gui = BacktestingGUI('MA')
             self.gui.run_func = self.run
             self.gui.show()
             qapp.exec_()
@@ -113,7 +119,8 @@ class AboveUnderMAStd(Strategery):
             if went_above_ma_std and (not less_than_last_buy) and self.trader.btc > 0 and self.market_entered:
                 self.sell(i, day, max=True)
 
-            if went_below_ma_std and (not greater_than_last_sell) and self.trader.balance > 0 and self.market_entered:
+            # if went_below_ma_std and (not greater_than_last_sell) and self.trader.balance > 0 and self.market_entered:
+            if went_below_ma_std  and self.trader.balance > 0 and self.market_entered:
                 self.buy(i, day, max=True)
 
             # if went_below_ma_std and self.trader.balance > 0 and self.market_entered:
@@ -145,7 +152,6 @@ class AboveUnderMAStd(Strategery):
 
 
 class MACD(Strategery):
-
     def __init__(self, market_df, currency, initial_balance, log, ui):
         Strategery.__init__(self, market_df, currency, initial_balance, log)
 
@@ -158,7 +164,73 @@ class MACD(Strategery):
 
         if self.ui:
             qapp = QApplication(sys.argv)
-            self.gui = BacktestingGUI()
+            self.gui = BacktestingGUI('MACD')
+            self.gui.run_func = self.run
+            self.gui.show()
+            qapp.exec_()
+   
+    def enrich_market_df(self):
+        self.df = compute_MACD(self.df)
+
+    def run(self):
+        self.enrich_market_df()
+
+        for i, day in islice(self.df.iterrows(), self.start_day, None):
+            try:
+                self.prev_day = self.df.loc[i-pd.Timedelta(days=1)]
+            except KeyError:
+                # missing timestamp
+                self.prev_day = self.prev_day
+
+            # if self.market_entered:
+            #     less_than_last_buy = day.Close < self.prev_trade.price
+            #     greater_than_last_sell = day.Close > self.prev_trade.price
+            # else:
+            less_than_last_buy = True
+            greater_than_last_sell = True
+
+            macd_goes_below_sl = day.MACD < day.SL and self.prev_day.MACD >= day.SL
+            macd_goes_above_sl = day.MACD > day.SL and self.prev_day.MACD <= day.SL
+
+            if macd_goes_above_sl and not self.market_entered:
+                self.buy(i, day, max=True)
+            
+            if macd_goes_above_sl and less_than_last_buy and self.market_entered:
+                self.buy(i, day, max=True)
+
+            if macd_goes_below_sl and greater_than_last_sell and self.market_entered:
+                self.sell(i, day, max=True)
+
+            self.df.at[i, 'equity'] = self.trader.balance + (self.trader.btc * day.Close)
+            # self.df.at[i, 'drawdown_pct'] = -(self.df.loc[i].equity / max(self.df.equity[self.start_date:i])) * 100
+
+            if self.ui:
+                self.gui.plot_price_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays,
+                                          self.df.MACD[:i], self.df.SL[:i])
+                self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
+                # self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
+
+        # if btc is held at the end of the market data, then sell for USD to get USD PnL
+        if self.trader.btc > 0:
+            self.sell(i, day, max=True)
+
+        self.report()
+
+
+class MACDZero(Strategery):
+    def __init__(self, market_df, currency, initial_balance, log, ui):
+        Strategery.__init__(self, market_df, currency, initial_balance, log)
+
+        self.ui = ui
+
+        self.prev_day = None
+        self.prev_trade = None
+        self.start_day = 27
+        self.start_date = self.df.index[self.start_day]
+
+        if self.ui:
+            qapp = QApplication(sys.argv)
+            self.gui = BacktestingGUI('MACD')
             self.gui.run_func = self.run
             self.gui.show()
             qapp.exec_()
@@ -172,17 +244,81 @@ class MACD(Strategery):
         for i, day in islice(self.df.iterrows(), self.start_day, None):
             self.prev_day = self.df.loc[i-pd.Timedelta(days=1)]
 
-            if self.market_entered:
-                less_than_last_buy = day.Close < self.prev_trade.price
-                greater_than_last_sell = day.Close > self.prev_trade.price
-            else:
-                less_than_last_buy = False
-                greater_than_last_sell = False
+            # if self.market_entered:
+            #     less_than_last_buy = day.Close < self.prev_trade.price
+            #     greater_than_last_sell = day.Close > self.prev_trade.price
+            # else:
+            less_than_last_buy = True
+            greater_than_last_sell = True
+
+            macd_goes_below_sl = day.MACD < 0 and self.prev_day.MACD >= 0
+            macd_goes_above_sl = day.MACD > 0 and self.prev_day.MACD <= 0
+
+            if macd_goes_above_sl and not self.market_entered:
+                self.buy(i, day, max=True)
+            
+            if macd_goes_above_sl and less_than_last_buy and self.market_entered:
+                self.buy(i, day, max=True)
+
+            if macd_goes_below_sl and greater_than_last_sell and self.market_entered:
+                self.sell(i, day, max=True)
+
+            self.df.at[i, 'equity'] = self.trader.balance + (self.trader.btc * day.Close)
+            # self.df.at[i, 'drawdown_pct'] = -(self.df.loc[i].equity / max(self.df.equity[self.start_date:i])) * 100
+
+            if self.ui:
+                self.gui.plot_price_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays,
+                                          self.df.MACD[:i], self.df.SL[:i])
+                self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
+                # self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
+
+        # if btc is held at the end of the market data, then sell for USD to get USD PnL
+        if self.trader.btc > 0:
+            self.sell(i, day, max=True)
+
+        self.report()
+
+class MACDZero(Strategery):
+    def __init__(self, market_df, currency, initial_balance, log, ui):
+        Strategery.__init__(self, market_df, currency, initial_balance, log)
+
+        self.ui = ui
+
+        self.prev_day = None
+        self.prev_trade = None
+        self.start_day = 27
+        self.start_date = self.df.index[self.start_day]
+
+        if self.ui:
+            qapp = QApplication(sys.argv)
+            self.gui = BacktestingGUI('MACD')
+            self.gui.run_func = self.run
+            self.gui.show()
+            qapp.exec_()
+   
+    def enrich_market_df(self):
+        self.df = compute_MACD(self.df)
+
+    def run(self):
+        self.enrich_market_df()
+
+        for i, day in islice(self.df.iterrows(), self.start_day, None):
+            self.prev_day = self.df.loc[i-pd.Timedelta(days=1)]
+
+            # if self.market_entered:
+            #     less_than_last_buy = day.Close < self.prev_trade.price
+            #     greater_than_last_sell = day.Close > self.prev_trade.price
+            # else:
+            less_than_last_buy = True
+            greater_than_last_sell = True
 
             macd_goes_below_sl = day.MACD < day.SL and self.prev_day.MACD >= day.SL
             macd_goes_above_sl = day.MACD > day.SL and self.prev_day.MACD <= day.SL
 
-            if macd_goes_above_sl and less_than_last_buy:
+            if macd_goes_above_sl and not self.market_entered:
+                self.buy(i, day, max=True)
+            
+            if macd_goes_above_sl and less_than_last_buy and self.market_entered:
                 self.buy(i, day, max=True)
 
             if macd_goes_below_sl and greater_than_last_sell and self.market_entered:
