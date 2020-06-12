@@ -63,10 +63,11 @@ def compute_SAR():
     pass
 
 
-def compute_sharpe_ratio(strat_return, period_start, period_end):
+def compute_sharpe_ratio(strat_return, period_start, period_end, hourly=False):
     """
     Daily timestamps. Hourly was not available.
     """
+    strat_return = np.reshape(strat_return, (-1,24)).sum(axis=1) if hourly else strat_return
     index = pd.read_csv('../resources/CRIX_USD_2015-01-01_2020-05-23_Daily.csv')
     index.Date = pd.to_datetime(index.Date)
     index.Price = index.Price.astype(float)
@@ -76,4 +77,4 @@ def compute_sharpe_ratio(strat_return, period_start, period_end):
     mean = np.mean(strat_return - index_return)
     variance = np.var(strat_return - index_return)
 
-    return mean / np.sqrt(variance)
+    return round(mean / np.sqrt(variance), 5)

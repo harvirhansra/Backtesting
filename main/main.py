@@ -2,7 +2,7 @@ import time
 import pandas as pd
 
 from market.marketdata import get_data_from_csv
-from trade.strategery import AboveUnderMAStd, MACD, MACDZero
+from trade.strategery import AboveUnderMAStd, MACD, MACDZero, RSI
 
 def main():
     # df = get_data_from_csv('../resources/BTC_USD_2015-10-08_2020-05-23_Gemini_Daily.csv')
@@ -16,20 +16,20 @@ def main():
 
     """
     TODO:
+        - minimum holding period
+        - Longest holding period
         - Optimise graph drawing with update
         - Rolling price graph window
-        - Create drawdown graph
-        - Add markers on equity graph
-        - Add stop backtesting button (that kills the QThread)
-        - Add multiple trades and logging
-        - Win/loss percentages
+        - Add multiple trades and logging to file
     """
 
-    # AboveUnderMAStd(df, 'BTC', 10000, log=True, ui=False, std=2, lookback=20)
-    strat = MACD(df, 'BTC', 10000, True, False)
-    strat.run()
+    # AboveUnderMAStd(df, 'BTC', 10000, log=True, ui=True, std=2, lookback=20)
+    RSI(df, 'BTC', 10000, log=True, ui=True)
+    # strat = MACDZero(df, 'BTC', 10000, True, False)
+    # strat.run()
 
     exec_time = time.time() - start
+    print('')
     print(f'Backtesting ran for {exec_time} seconds')
 
 if __name__ == '__main__':

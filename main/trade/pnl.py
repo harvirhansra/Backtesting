@@ -35,7 +35,7 @@ def report_final_pnl(start_balance, start_btc, balance, btc, ccy, log=True):
     if log:
         print('')
         print('Starting balance: {}{}'.format(final_ccy, start))
-        print('Final balance: {}{}'.format(final_ccy, final))
+        print('Final balance: {}{}'.format(final_ccy, round(final, 2)))
         print('PnL: '+str(pnl)+'%')
         print('')
     return pnl

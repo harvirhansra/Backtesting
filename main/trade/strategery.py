@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QApplication
 from trade.trader import Trader
 from ui.graphgui import BacktestingGUI
 from trade.pnl import win_or_loss, report_final_pnl
-from analytics.analytics import compute_sharpe_ratio, compute_MA, compute_MACD
+from analytics.analytics import compute_sharpe_ratio, compute_MA, compute_MACD, compute_RSI
 
 
 class Strategery(object):
@@ -31,12 +31,13 @@ class Strategery(object):
 
         self.plays = []
         self.equity = []
+        self.peak_equity = self.start_balance
         self.market_entered = False
 
     def buy(self, date, day, quantity=0, max=False):
         trade = self.trader.buy(day.Close, date, quantity, max=max)
         if trade.quantity > 0:
-            self.plays.append((trade.date, trade.price, 'buy'))
+            self.plays.append((trade.date, trade.price, 'buy', None))
             self.prev_trade = trade
             if len(self.plays) == 1:
                 self.start_btc = trade.quantity
@@ -54,16 +55,17 @@ class Strategery(object):
 
     def report(self):
         report_final_pnl(self.start_balance, self.start_btc, self.trader.balance, self.trader.btc, self.currency, self.log)
-        longs = len([play for play in self.plays if len(play) == 4])
+        longs = len([play for play in self.plays if play[3] == 'win' or play[3] == 'loss'])
         wins = len([play for play in self.plays if len(play) == 4 and play[-1]=='win'])
         losses = len([play for play in self.plays if len(play) == 4 and play[-1]=='loss'])
-        # sharpe_df = self.df.loc[self.start_date:]
-        # sharpe = compute_sharpe_ratio(sharpe_df['pct_change'].values, sharpe_df.index[0], sharpe_df.index[-1])
+        wins_pct = round((wins/longs)*100, 2)
+        losses_pct = round((losses/longs)*100, 2)
+        sharpe = compute_sharpe_ratio(self.df['pct_change'].values, self.df.index[0], self.df.index[-1], hourly=True)
         if self.log:
             print(f'Long plays: {longs}')
-            print(f'Wins: {wins}')
-            print(f'Loses: {losses}')
-            #print(f'Sharpe ratio: {sharpe}')
+            print(f'Wins: {wins} - {wins_pct}%')
+            print(f'Loses: {losses} - {losses_pct}%')
+            print(f'Sharpe ratio: {sharpe}')
 
     def enrich_market_df(self):
         return self.df
@@ -113,29 +115,28 @@ class AboveUnderMAStd(Strategery):
             went_below_ma_std = day.Close <= (day.MA - (self.std*day.MA_std)) \
                 and self.prev_day.Close > (day.MA-(self.std*day.MA_std))
 
+            self.df.at[i, 'equity'] = self.trader.balance + (self.trader.btc * day.Close)
+            self.peak_equity = self.df.loc[i].equity if self.df.loc[i].equity > self.peak_equity else self.peak_equity
+            self.df.at[i, 'drawdown_pct'] = -((self.peak_equity - self.df.loc[i].equity)/self.df.loc[i].equity)*100
+
             if went_below_ma_std and self.trader.balance > 0 and not self.market_entered:  # when to join market
                 self.buy(i, day, max=True)
 
-            if went_above_ma_std and (not less_than_last_buy) and self.trader.btc > 0 and self.market_entered:
+            # if went_above_ma_std and (not less_than_last_buy) and self.trader.btc > 0 and self.market_entered:
+            if went_above_ma_std and self.trader.btc > 0 and self.market_entered:
                 self.sell(i, day, max=True)
 
             # if went_below_ma_std and (not greater_than_last_sell) and self.trader.balance > 0 and self.market_entered:
             if went_below_ma_std  and self.trader.balance > 0 and self.market_entered:
                 self.buy(i, day, max=True)
 
-            # if went_below_ma_std and self.trader.balance > 0 and self.market_entered:
-            #    self.buy(i, day, max=True)
-
-            self.df.at[i, 'equity'] = self.trader.balance + (self.trader.btc * day.Close)
-            # self.df.at[i, 'drawdown_pct'] = -(self.df.loc[i].equity / max(self.df.equity[self.start_date:i])) * 100
-
-            if self.ui:
-                self.gui.plot_price_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays,
-                                          self.df.MA[:i].values,
-                                          (self.df.MA[:i].values + self.std*self.df.MA_std[:i].values),
-                                          (self.df.MA[:i].values - self.std*self.df.MA_std[:i].values))
-                self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
-                # self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
+        if self.ui:
+            self.gui.plot_price_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays,
+                                        self.df.MA[:i].values,
+                                        (self.df.MA[:i].values + self.std*self.df.MA_std[:i].values),
+                                        (self.df.MA[:i].values - self.std*self.df.MA_std[:i].values))
+            self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
+            self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
 
         # if btc is held at the end of the market data, then sell for USD to get USD PnL
         if self.trader.btc > 0 and (not self.calib):
@@ -177,38 +178,29 @@ class MACD(Strategery):
 
         for i, day in islice(self.df.iterrows(), self.start_day, None):
             try:
-                self.prev_day = self.df.loc[i-pd.Timedelta(days=1)]
+                self.prev_day = self.df.loc[i-pd.Timedelta(hours=1)]
             except KeyError:
                 # missing timestamp
                 self.prev_day = self.prev_day
 
-            # if self.market_entered:
-            #     less_than_last_buy = day.Close < self.prev_trade.price
-            #     greater_than_last_sell = day.Close > self.prev_trade.price
-            # else:
-            less_than_last_buy = True
-            greater_than_last_sell = True
-
             macd_goes_below_sl = day.MACD < day.SL and self.prev_day.MACD >= day.SL
             macd_goes_above_sl = day.MACD > day.SL and self.prev_day.MACD <= day.SL
 
-            if macd_goes_above_sl and not self.market_entered:
+            if macd_goes_above_sl:
                 self.buy(i, day, max=True)
             
-            if macd_goes_above_sl and less_than_last_buy and self.market_entered:
-                self.buy(i, day, max=True)
-
-            if macd_goes_below_sl and greater_than_last_sell and self.market_entered:
+            if macd_goes_below_sl and self.market_entered:
                 self.sell(i, day, max=True)
 
             self.df.at[i, 'equity'] = self.trader.balance + (self.trader.btc * day.Close)
-            # self.df.at[i, 'drawdown_pct'] = -(self.df.loc[i].equity / max(self.df.equity[self.start_date:i])) * 100
+            self.peak_equity = self.df.loc[i].equity if self.df.loc[i].equity > self.peak_equity else self.peak_equity
+            self.df.at[i, 'drawdown_pct'] = -((self.peak_equity - self.df.loc[i].equity)/self.df.loc[i].equity)*100
 
-            if self.ui:
-                self.gui.plot_price_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays,
-                                          self.df.MACD[:i], self.df.SL[:i])
-                self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
-                # self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
+        if self.ui:
+            self.gui.plot_price_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays,
+                                        self.df.MACD[:i], self.df.SL[:i])
+            self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
+            self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
 
         # if btc is held at the end of the market data, then sell for USD to get USD PnL
         if self.trader.btc > 0:
@@ -242,35 +234,29 @@ class MACDZero(Strategery):
         self.enrich_market_df()
 
         for i, day in islice(self.df.iterrows(), self.start_day, None):
-            self.prev_day = self.df.loc[i-pd.Timedelta(days=1)]
-
-            # if self.market_entered:
-            #     less_than_last_buy = day.Close < self.prev_trade.price
-            #     greater_than_last_sell = day.Close > self.prev_trade.price
-            # else:
-            less_than_last_buy = True
-            greater_than_last_sell = True
+            self.prev_day = self.df.loc[i-pd.Timedelta(hours=1)]
 
             macd_goes_below_sl = day.MACD < 0 and self.prev_day.MACD >= 0
             macd_goes_above_sl = day.MACD > 0 and self.prev_day.MACD <= 0
 
+            self.df.at[i, 'equity'] = self.trader.balance + (self.trader.btc * day.Close)
+            self.peak_equity = self.df.loc[i].equity if self.df.loc[i].equity > self.peak_equity else self.peak_equity
+            self.df.at[i, 'drawdown_pct'] = -((self.peak_equity - self.df.loc[i].equity)/self.df.loc[i].equity)*100
+
             if macd_goes_above_sl and not self.market_entered:
                 self.buy(i, day, max=True)
             
-            if macd_goes_above_sl and less_than_last_buy and self.market_entered:
+            if macd_goes_above_sl and self.market_entered:
                 self.buy(i, day, max=True)
 
-            if macd_goes_below_sl and greater_than_last_sell and self.market_entered:
+            if macd_goes_below_sl and self.market_entered:
                 self.sell(i, day, max=True)
-
-            self.df.at[i, 'equity'] = self.trader.balance + (self.trader.btc * day.Close)
-            # self.df.at[i, 'drawdown_pct'] = -(self.df.loc[i].equity / max(self.df.equity[self.start_date:i])) * 100
-
-            if self.ui:
-                self.gui.plot_price_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays,
-                                          self.df.MACD[:i], self.df.SL[:i])
-                self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
-                # self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
+            
+        if self.ui:
+            self.gui.plot_price_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays,
+                                        self.df.MACD[:i], self.df.SL[:i])
+            self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
+            self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
 
         # if btc is held at the end of the market data, then sell for USD to get USD PnL
         if self.trader.btc > 0:
@@ -278,7 +264,8 @@ class MACDZero(Strategery):
 
         self.report()
 
-class MACDZero(Strategery):
+
+class RSI(Strategery):
     def __init__(self, market_df, currency, initial_balance, log, ui):
         Strategery.__init__(self, market_df, currency, initial_balance, log)
 
@@ -291,50 +278,48 @@ class MACDZero(Strategery):
 
         if self.ui:
             qapp = QApplication(sys.argv)
-            self.gui = BacktestingGUI('MACD')
+            self.gui = BacktestingGUI('RSI')
             self.gui.run_func = self.run
             self.gui.show()
             qapp.exec_()
    
     def enrich_market_df(self):
-        self.df = compute_MACD(self.df)
+        self.df = compute_RSI(self.df)
 
     def run(self):
         self.enrich_market_df()
 
         for i, day in islice(self.df.iterrows(), self.start_day, None):
-            self.prev_day = self.df.loc[i-pd.Timedelta(days=1)]
+            self.prev_day = self.df.loc[i-pd.Timedelta(hours=1)]
 
-            # if self.market_entered:
-            #     less_than_last_buy = day.Close < self.prev_trade.price
-            #     greater_than_last_sell = day.Close > self.prev_trade.price
-            # else:
-            less_than_last_buy = True
-            greater_than_last_sell = True
+            above_70_rsi = day.RSI > 70 and self.prev_day.RSI <= 70
+            below_30_rsi = day.RSI < 30 and self.prev_day.RSI >= 30
 
-            macd_goes_below_sl = day.MACD < day.SL and self.prev_day.MACD >= day.SL
-            macd_goes_above_sl = day.MACD > day.SL and self.prev_day.MACD <= day.SL
-
-            if macd_goes_above_sl and not self.market_entered:
-                self.buy(i, day, max=True)
-            
-            if macd_goes_above_sl and less_than_last_buy and self.market_entered:
-                self.buy(i, day, max=True)
-
-            if macd_goes_below_sl and greater_than_last_sell and self.market_entered:
-                self.sell(i, day, max=True)
+            # above_70_rsi = day.RSI > 50 and self.prev_day.RSI <= 50
+            # below_30_rsi = day.RSI < 50 and self.prev_day.RSI >= 50
 
             self.df.at[i, 'equity'] = self.trader.balance + (self.trader.btc * day.Close)
-            # self.df.at[i, 'drawdown_pct'] = -(self.df.loc[i].equity / max(self.df.equity[self.start_date:i])) * 100
+            self.peak_equity = self.df.loc[i].equity if self.df.loc[i].equity > self.peak_equity else self.peak_equity
+            self.df.at[i, 'drawdown_pct'] = -((self.peak_equity - self.df.loc[i].equity)/self.df.loc[i].equity)*100
 
-            if self.ui:
-                self.gui.plot_price_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays,
-                                          self.df.MACD[:i], self.df.SL[:i])
-                self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
-                # self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
+            if below_30_rsi and not self.market_entered:
+                self.buy(i, day, max=True)
+            
+            if above_70_rsi and self.market_entered:
+                self.buy(i, day, max=True)
+
+            if below_30_rsi and self.market_entered:
+                self.sell(i, day, max=True)
+            
+        if self.ui:
+            self.gui.plot_price_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays,
+                                        self.df.RSI[:i])
+            self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
+            self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
 
         # if btc is held at the end of the market data, then sell for USD to get USD PnL
         if self.trader.btc > 0:
             self.sell(i, day, max=True)
 
         self.report()
+

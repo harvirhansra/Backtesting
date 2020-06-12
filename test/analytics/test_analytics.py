@@ -71,3 +71,13 @@ def test_compute_sharpe_ratio():
     returns[80] = 10
     sharpe = compute_sharpe_ratio(returns, start, end)
     assert abs(sharpe - 0.16923451305235063) < 0.0001
+
+def test_compute_sharpe_ratio_hourly():
+    start = pd.Timestamp('2019-04-05 00:00:00')
+    end = pd.Timestamp('2019-07-05 00:00:00')
+    returns = np.zeros(92*24)
+    returns[5] = 20
+    returns[34] = 10
+    returns[80] = 10
+    sharpe = compute_sharpe_ratio(returns, start, end, hourly=True)
+    assert abs(sharpe - 0.169486827774798) < 0.0001
