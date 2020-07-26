@@ -5,18 +5,19 @@ TradeTuple = namedtuple('Trade', ['action', 'new_balance', 'price', 'quantity', 
 
 class Trader:
 
-    def __init__(self, balance, ccy,  name='harvir', btc=0):
+    def __init__(self, balance, ccy,  name='harvir', btc=0, fees=0.001):
         self.name = name
         self.balance = balance
         self.btc = btc
         self.ccy = ccy
+        self.fees = fees
 
     def buy(self, price, date, quantity=0, max=False):
         if max:
             quantity = self.balance / price
             future_balance = 0
         else:
-            future_balance = self.balance - (price*quantity)
+            future_balance = self.balance - ((price*quantity) - (price*quantity)*self.fees)
 
         if future_balance < 0:
             return False
@@ -32,7 +33,7 @@ class Trader:
             return False
 
         quantity = self.btc if max else quantity
-        self.balance += price*quantity
+        self.balance += ((price*quantity) - (price*quantity)*0.001)
         self.btc -= quantity
 
         return TradeTuple('sell', self.balance, price, quantity, date, 'Sold {}{} at {} on {}'.format(quantity, self.ccy, price, date))

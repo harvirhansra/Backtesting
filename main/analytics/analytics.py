@@ -30,11 +30,15 @@ def compute_RSI(df, n=14):
     return df
 
 
-def compute_MA(df, n=14, hourly=False):
+def compute_MA(df, n=14, hourly=False, multiple=False):
     pd.set_option('mode.chained_assignment', None)
     n = 24*n if hourly else n
-    df['MA'] = df.Close.rolling(window=n).mean()
-    df['MA_std'] = df.MA.rolling(window=n).std()
+    if multiple:
+        df['MA'+str(n)] = df.Close.rolling(window=n).mean()
+        df['MA'+str(n)+'_std'] = df['MA'+str(n)].rolling(window=n).std()
+    else:
+        df['MA'] = df.Close.rolling(window=n).mean()
+        df['MA_std'] = df.MA.rolling(window=n).std()
     return df
 
 

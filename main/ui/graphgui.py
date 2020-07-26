@@ -17,7 +17,7 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         super().__init__()
 
         self.showFullScreen()
-        
+
         self.strat_type = strat_type
 
         self.resize(1000, 500)
@@ -52,7 +52,7 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         self.addToolBar(QtCore.Qt.BottomToolBarArea,
                         NavigationToolbar(price_canvas, self))
         self._price_ax = price_canvas.figure.subplots()
-        if self.strat_type in ('MACD', 'RSI'):
+        if self.strat_type in ('MACD', 'RSI', 'MA+RSI'):
             self._price_ax2 = self._price_ax.twinx()
         self._format_price_graph()
 
@@ -91,7 +91,7 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         sys.stdout = self.log
         worker = Worker(self.run_func)
         self.threadpool.start(worker)
-        
+
     def _format_price_graph(self):
         self._price_ax.set_ylabel('price', color='white')
         if self.strat_type == 'MACD':
@@ -102,6 +102,11 @@ class BacktestingGUI(QtWidgets.QMainWindow):
             self._price_ax2.set_ylabel('RSI', color='white')
             self._price_ax2.tick_params(axis='x', colors='white')
             self._price_ax2.tick_params(axis='y', colors='white', which='both')
+        elif self.strat_type == 'MA+RSI':
+            self._price_ax2.set_ylabel('RSI', color='white')
+            self._price_ax2.tick_params(axis='x', colors='white')
+            self._price_ax2.tick_params(axis='y', colors='white', which='both')
+
         self._price_ax.set_xlabel('date', color='white')
         self._price_ax.tick_params(axis='x', colors='white')
         self._price_ax.tick_params(axis='y', colors='white', which='both')
@@ -113,7 +118,7 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         self._equity_ax.tick_params(axis='x', colors='white')
         self._equity_ax.tick_params(axis='y', colors='white', which='both')
         self._equity_ax.set_facecolor('#404040')
-    
+
     def _format_drawdown_graph(self):
         self._drawdown_ax.set_ylabel('drawdown', color='white')
         self._drawdown_ax.set_xlabel('date', color='white')
@@ -135,10 +140,13 @@ class BacktestingGUI(QtWidgets.QMainWindow):
             # self._price_ax2.plot(dates, metric1, linewidth=0.8, color='#e9de1c', label='RSI')
             self._price_ax2.plot(dates, np.full(len(metric1), 70), 'r--', color='grey', label='70')
             self._price_ax2.plot(dates, np.full(len(metric1), 30), 'r--', color='grey', label='30')
+        elif self.strat_type in ('MA+RSI',):
+            self._price_ax.plot(dates, metric1, linewidth=0.8, color='#e9de1c', label='MA50')
+            self._price_ax.plot(dates, metric2, linewidth=0.8, color='#1ce926', label='MA10')
+            self._price_ax2.plot(dates, metric3, linewidth=0.8, color='#7f32a8', label='RSI')
 
-            # self._price_ax2.legend()
-        # self._price_ax.legend()
-        """
+        self._price_ax2.legend()
+        self._price_ax.legend()
         for date, price, action, _ in plays:
             self._price_ax.annotate(action, (date, price), color='white',
                                     xycoords='data', xytext=(0, 40),
@@ -146,7 +154,6 @@ class BacktestingGUI(QtWidgets.QMainWindow):
                                     arrowprops=dict(arrowstyle="->",
                                                     connectionstyle="arc3",
                                                     color='white', lw=0.5))
-        """
         self._price_ax.figure.canvas.draw()
 
     def plot_equity_graph(self, dates, equity):
@@ -154,7 +161,7 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         self._equity_ax.plot(dates, equity, linewidth=1, color='white', label='Equity')
         self._equity_ax.legend()
         self._equity_ax.figure.canvas.draw()
-    
+
     def plot_drawdown_graph(self, dates, drawdown):
         self._drawdown_ax.cla()
         self._drawdown_ax.plot(dates, drawdown, linewidth=0, color='white', label='Drawdown')
@@ -168,6 +175,6 @@ class Worker(QRunnable):
     def __init__(self, func):
         super(Worker, self).__init__()
         self.func = func
-        
+
     def run(self):
         self.func()
