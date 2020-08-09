@@ -1,6 +1,7 @@
 import io
 import sys
 import numpy as np
+from scipy.stats import norm
 
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt, QRunnable, QThreadPool, QTimer
@@ -41,6 +42,7 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         self._create_log_box(self.middle)
         self._create_equity_graph(self.middle)
         self._create_drawdown_graph(self.middle)
+        self._create_distribution_graph(self.middle)
         self._start_button(self.bottom)
 
         self.threadpool = QThreadPool()
@@ -68,6 +70,12 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         self._drawdown_ax = drawdown_canvas.figure.subplots()
         self._format_drawdown_graph()
 
+    def _create_distribution_graph(self, section):
+        distribution_canvas = FigureCanvas(Figure(figsize=(25, 40), facecolor='#404040', dpi=80))
+        section.addWidget(distribution_canvas)
+        self._distribution_ax = distribution_canvas.figure.subplots()
+        self._format_distribution_graph()
+
     def _create_log_box(self, section):
         def _update_text():
             self.print_text.setPlainText(self.log.getvalue())
@@ -76,7 +84,7 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         self.print_text = QPlainTextEdit()
         self.print_text.setReadOnly(True)
         self.print_text.setMinimumHeight(80)
-        self.print_text.setMinimumWidth(400)
+        self.print_text.setMinimumWidth(335)
         section.addWidget(self.print_text)
         self.print_timer = QTimer()
         self.print_timer.timeout.connect(_update_text)
@@ -126,6 +134,13 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         self._drawdown_ax.tick_params(axis='y', colors='white', which='both')
         self._drawdown_ax.set_facecolor('#404040')
 
+    def _format_distribution_graph(self):
+        self._distribution_ax.set_ylabel('distribution', color='white')
+        self._distribution_ax.set_xlabel('date', color='white')
+        self._distribution_ax.tick_params(axis='x', colors='white')
+        self._distribution_ax.tick_params(axis='y', colors='white', which='both')
+        self._distribution_ax.set_facecolor('#404040')
+
     def plot_price_graph(self, dates, price, plays, metric1=None, metric2=None, metric3=None):
         self._price_ax.cla()
         self._price_ax.plot(dates, price, linewidth=1, color='#53a8b2', label='Price')
@@ -137,6 +152,7 @@ class BacktestingGUI(QtWidgets.QMainWindow):
             self._price_ax2.plot(dates, metric1, linewidth=0.8, color='#e9de1c', label='MACD')
             self._price_ax2.plot(dates, metric2, linewidth=0.8, color='#9d6fff', label='Signal Line')
         elif self.strat_type in ('RSI',):
+            # pass
             # self._price_ax2.plot(dates, metric1, linewidth=0.8, color='#e9de1c', label='RSI')
             self._price_ax2.plot(dates, np.full(len(metric1), 70), 'r--', color='grey', label='70')
             self._price_ax2.plot(dates, np.full(len(metric1), 30), 'r--', color='grey', label='30')
@@ -168,6 +184,16 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         self._drawdown_ax.legend()
         self._drawdown_ax.fill_between(dates, 0, drawdown, color='red')
         self._drawdown_ax.figure.canvas.draw()
+
+    def plot_distribution_graph(self, wls):
+        wls = np.sort(wls)
+        mean, std = np.mean(wls), np.std(wls)
+        fit = norm.pdf(wls, mean, std)
+        self._distribution_ax.cla()
+        self._distribution_ax.hist(wls, bins=20, density=True)
+        self._distribution_ax.plot(wls, fit, linewidth=1, color='white', label='Distribution')
+        self._distribution_ax.legend()
+        self._distribution_ax.figure.canvas.draw()
 
 
 class Worker(QRunnable):
