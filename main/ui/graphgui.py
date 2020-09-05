@@ -54,7 +54,7 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         self.addToolBar(QtCore.Qt.BottomToolBarArea,
                         NavigationToolbar(price_canvas, self))
         self._price_ax = price_canvas.figure.subplots()
-        if self.strat_type in ('MACD', 'RSI', 'MA+RSI'):
+        if self.strat_type in ('MACD', 'RSI', 'MA+RSI', 'DL'):
             self._price_ax2 = self._price_ax.twinx()
         self._format_price_graph()
 
@@ -114,8 +114,12 @@ class BacktestingGUI(QtWidgets.QMainWindow):
             self._price_ax2.set_ylabel('RSI', color='white')
             self._price_ax2.tick_params(axis='x', colors='white')
             self._price_ax2.tick_params(axis='y', colors='white', which='both')
+        elif self.strat_type == 'DL':
+            self._price_ax2.set_ylabel('Prediction', color='white')
+            self._price_ax2.tick_params(axis='x', colors='white')
+            self._price_ax2.tick_params(axis='y', colors='white', which='both')
 
-        self._price_ax.set_xlabel('date', color='white')
+        self._price_ax.set_xlabel('Date', color='white')
         self._price_ax.tick_params(axis='x', colors='white')
         self._price_ax.tick_params(axis='y', colors='white', which='both')
         self._price_ax.set_facecolor('#404040')
@@ -160,16 +164,23 @@ class BacktestingGUI(QtWidgets.QMainWindow):
             self._price_ax.plot(dates, metric1, linewidth=0.8, color='#e9de1c', label='MA50')
             self._price_ax.plot(dates, metric2, linewidth=0.8, color='#1ce926', label='MA10')
             self._price_ax2.plot(dates, metric3, linewidth=0.8, color='#7f32a8', label='RSI')
+        elif self.strat_type == 'DL':
+            self._price_ax2.plot(dates, metric3, linewidth=0.8, color='#7f32a8', label='RSI')
 
         self._price_ax2.legend()
         self._price_ax.legend()
-        for date, price, action, _ in plays:
-            self._price_ax.annotate(action, (date, price), color='white',
-                                    xycoords='data', xytext=(0, 40),
-                                    textcoords='offset points',
-                                    arrowprops=dict(arrowstyle="->",
-                                                    connectionstyle="arc3",
-                                                    color='white', lw=0.5))
+        if plays is not None:
+            for date, price, action, _ in plays:
+                self._price_ax.annotate(action, (date, price), color='white',
+                                        xycoords='data', xytext=(0, 40),
+                                        textcoords='offset points',
+                                        arrowprops=dict(arrowstyle="->",
+                                                        connectionstyle="arc3",
+                                                        color='white', lw=0.5))
+        self._price_ax.figure.canvas.draw()
+
+    def plot_prediction_graph(self, dates, price):
+        self._price_ax.plot(dates, price, linewidth=1, color='yellow', label='Price', linestyle='dotted')
         self._price_ax.figure.canvas.draw()
 
     def plot_equity_graph(self, dates, equity):
