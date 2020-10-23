@@ -84,7 +84,7 @@ class BacktestingGUI(QtWidgets.QMainWindow):
         self.print_text = QPlainTextEdit()
         self.print_text.setReadOnly(True)
         self.print_text.setMinimumHeight(80)
-        self.print_text.setMinimumWidth(335)
+        self.print_text.setMinimumWidth(345)
         section.addWidget(self.print_text)
         self.print_timer = QTimer()
         self.print_timer.timeout.connect(_update_text)
@@ -114,10 +114,10 @@ class BacktestingGUI(QtWidgets.QMainWindow):
             self._price_ax2.set_ylabel('RSI', color='white')
             self._price_ax2.tick_params(axis='x', colors='white')
             self._price_ax2.tick_params(axis='y', colors='white', which='both')
-        elif self.strat_type == 'DL':
-            self._price_ax2.set_ylabel('Prediction', color='white')
-            self._price_ax2.tick_params(axis='x', colors='white')
-            self._price_ax2.tick_params(axis='y', colors='white', which='both')
+        # elif self.strat_type == 'DL':
+        #     self._price_ax2.set_ylabel('Prediction', color='white')
+        #     self._price_ax2.tick_params(axis='x', colors='white')
+        #     self._price_ax2.tick_params(axis='y', colors='white', which='both')
 
         self._price_ax.set_xlabel('Date', color='white')
         self._price_ax.tick_params(axis='x', colors='white')
@@ -156,19 +156,25 @@ class BacktestingGUI(QtWidgets.QMainWindow):
             self._price_ax2.plot(dates, metric1, linewidth=0.8, color='#e9de1c', label='MACD')
             self._price_ax2.plot(dates, metric2, linewidth=0.8, color='#9d6fff', label='Signal Line')
         elif self.strat_type in ('RSI',):
-            # pass
+            pass
             # self._price_ax2.plot(dates, metric1, linewidth=0.8, color='#e9de1c', label='RSI')
-            self._price_ax2.plot(dates, np.full(len(metric1), 70), 'r--', color='grey', label='70')
-            self._price_ax2.plot(dates, np.full(len(metric1), 30), 'r--', color='grey', label='30')
+            # self._price_ax2.plot(dates, np.full(len(metric1), 70), 'r--', color='grey', label='70')
+            # self._price_ax2.plot(dates, np.full(len(metric1), 30), 'r--', color='grey', label='30')
         elif self.strat_type in ('MA+RSI',):
             self._price_ax.plot(dates, metric1, linewidth=0.8, color='#e9de1c', label='MA50')
             self._price_ax.plot(dates, metric2, linewidth=0.8, color='#1ce926', label='MA10')
             self._price_ax2.plot(dates, metric3, linewidth=0.8, color='#7f32a8', label='RSI')
-        elif self.strat_type == 'DL':
-            self._price_ax2.plot(dates, metric3, linewidth=0.8, color='#7f32a8', label='RSI')
+        # elif self.strat_type == 'DL':
+        #     self._price_ax2.plot(dates, metric3, linewidth=0.8, color='#7f32a8', label='RSI')
 
-        self._price_ax2.legend()
+        # self._price_ax2.legend()
         self._price_ax.legend()
+
+        evens = tuple(zip([d for i, d in enumerate(dates) if i % 2 == 0], [d for i, d in enumerate(dates) if i % 2 != 0]))
+
+        for d, p in evens:
+            self._price_ax.axvspan(d, p, facecolor='#545151')
+
         if plays is not None:
             for date, price, action, _ in plays:
                 self._price_ax.annotate(action, (date, price), color='white',

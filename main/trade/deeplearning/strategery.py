@@ -41,7 +41,8 @@ class HourlyDL(StrategeryDL):
     def enrich_market_df(self):
         def normalize(df, column, mean, std):
             vals = df[col].values
-            df.loc[:, column+'_normal'] = pd.Series((vals - mean) / std, index=df.index, dtype=np.float64)
+            df.loc[:, column+'_normal'] = pd.Series((vals - mean) / std,
+                                                    index=df.index, dtype=np.float64)
 
         self.input_df.loc[:, 'ema12'] = self.input_df.ta.ema(12)
         self.input_df.loc[:, 'ema24'] = self.input_df.ta.ema(24)
@@ -60,7 +61,8 @@ class HourlyDL(StrategeryDL):
             mean = self.norms[col+'_mean']
             normalize(self.input_df, col, mean, std)
 
-        self.input_df.drop([x for x in self.input_df.columns.tolist() if 'normal' not in x], axis=1, inplace=True)
+        self.input_df.drop([x for x in self.input_df.columns.tolist()
+                            if 'normal' not in x], axis=1, inplace=True)
 
     def run(self):
         self.enrich_market_df()
@@ -69,6 +71,7 @@ class HourlyDL(StrategeryDL):
 
             window_df = self.input_df.loc[i-pd.Timedelta(hours=19):i]
             window_df.drop([c for c in window_df.columns.tolist() if 'normal' not in c], axis=1, inplace=True)
+
             input = tf.stack([row.values for _, row in window_df.iterrows()])
             input = tf.expand_dims(input, axis=0)
 
@@ -79,7 +82,7 @@ class HourlyDL(StrategeryDL):
                     self.buy(i, day, max=True)
                     self.market_entered = True
             else:
-                if prediction < day.Close*0.9975 and self.trader.btc > 0:
+                if prediction < day.Close and self.trader.btc > 0:
                     self.sell(i, day, max=True)
                 elif prediction > day.Close and self.trader.balance > 0:
                     self.buy(i, day, max=True)
@@ -87,20 +90,20 @@ class HourlyDL(StrategeryDL):
             self.df.at[i, 'equity'] = self.trader.balance + (self.trader.btc * day.Close)
             self.peak_equity = self.df.loc[i].equity if self.df.loc[i].equity > self.peak_equity else self.peak_equity
             self.df.at[i, 'drawdown_pct'] = -((self.peak_equity - self.df.loc[i].equity)/self.df.loc[i].equity)*100
-            self.df.at[i+pd.Timedelta(hours=4), 'prediction'] = prediction
+            # self.df.at[i+pd.Timedelta(hours=4), 'prediction'] = prediction
+            self.df.at[i+pd.Timedelta(hours=1), 'prediction'] = prediction
 
         # diffs = (self.df.Close - self.df.prediction)
         # diffs.loc[diffs.notnull()].plot.kde()
         # plt.show()
-       
+
         if self.trader.btc > 0:
             self.sell(i, day, max=True)
 
         if self.ui:
-            self.gui.plot_price_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays,
-                                      self.df.loc[self.df.prediction.notnull()].prediction)
-            # self.gui.plot_prediction_graph(self.df.loc[self.df.prediction.notnull()].index,
-            #                                self.df.loc[self.df.prediction.notnull()].prediction)
+            self.gui.plot_price_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays)
+            self.gui.plot_prediction_graph(self.df.loc[self.df.prediction.notnull()].index,
+                                           self.df.loc[self.df.prediction.notnull()].prediction)
             self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
             self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
             self.gui.plot_distribution_graph(self.df.loc[self.df['pct_change'] != 0]['pct_change'].values)
