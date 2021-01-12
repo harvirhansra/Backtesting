@@ -3,35 +3,27 @@ import numpy as np
 
 from backtesting.market.marketdata import get_data_from_csv
 
+
 def compute_RSI(df, n=14):
-    df.set_index
-    days = len(df)
-    deltas = np.append(np.zeros(1), np.diff(df['Close']))
+    """ Computes Relative Strength Index (RSI) """
+    deltas = np.diff(df.Close)
 
-    avg_gain = np.zeros(days)
-    avg_loss = np.zeros(days)
-    rs = np.zeros(days)
-    rsi = np.zeros(days)
+    ups = np.where(deltas < 0, 0, deltas)
+    downs = abs(np.where(deltas > 0, 0, deltas))
 
-    for i in range(0, len(avg_gain)):
-        if i > n-1:
-            slice = deltas[i-n:i]
-            avg_gain[i] = slice[slice > 0].sum() / n
-            avg_loss[i] = -slice[slice < 0].sum() / n
-            rs[i] = avg_gain[i] / avg_loss[i]
-            rsi[i] = 100.0 - (100.0 / (1.0+rs[i]))
+    avg_gain = np.convolve(ups, np.ones(n)/n, mode='valid')
+    avg_loss = np.convolve(downs, np.ones(n)/n, mode='valid')
 
-    df['deltas'] = deltas
-    df['avg_gain'] = avg_gain
-    df['avg_loss'] = avg_loss
-    df['RS'] = rs
+    rs = avg_gain / avg_loss
+    rsi = 100.0 - (100.0 / (1.0+rs))
+    rsi = np.append(np.zeros(14), rsi)
+
     df['RSI'] = rsi
-
-    df.drop(columns=['deltas', 'avg_gain', 'avg_loss', 'RS'], inplace=True)
     return df
 
 
 def compute_MA(df, n=14, hourly=False, multiple=False):
+    """ Computes Simple Moving Average """
     pd.set_option('mode.chained_assignment', None)
     n = 24*n if hourly else n
     if multiple:
@@ -44,6 +36,7 @@ def compute_MA(df, n=14, hourly=False, multiple=False):
 
 
 def compute_WMA(df, n=14):
+    """ Computes Weighted Moving Average """
     weights = np.arange(1, n)
     df['WMA'] = df.Close.rolling(window=n).apply(lambda prices: np.dot(prices, weights)/weights.sum())
     df['WMA_std'] = df.WMA.rolling(window=n).std()
@@ -51,12 +44,14 @@ def compute_WMA(df, n=14):
 
 
 def compute_EMA(df, n=14):
+    """ Computes Exponential Moving Average """
     df['EMA'] = df.Close.ewm(span=n).mean()
     df['EMA_std'] = df.EMA.rolling(window=n).std()
     return df
 
 
 def compute_MACD(df):
+    """ Computes Moving Average Convergence Divergence """
     df['EMA26'] = df.Close.ewm(span=26).mean()
     df['EMA12'] = df.Close.ewm(span=12).mean()
     df['MACD'] = df.EMA12.values - df.EMA26.values
