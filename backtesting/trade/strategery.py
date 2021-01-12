@@ -63,7 +63,7 @@ class Strategery(object):
                 self.market_entered = True
 
     def report(self):
-        buy_and_hold = round((self.df.iloc[-1].Close - self.df.iloc[0].Close) / self.df.iloc[0].Close, 2)
+        buy_and_hold = round(((self.df.iloc[-1].Close - self.df.iloc[0].Close) / self.df.iloc[0].Close) * 100, 2)
         pnl = report_final_pnl(self.start_balance, self.start_btc, self.trader.balance,
                                self.trader.btc, self.currency, self.log)
         longs = len([play for play in self.plays if play[3] == 'win' or play[3] == 'loss'])
