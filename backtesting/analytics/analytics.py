@@ -62,7 +62,6 @@ def compute_SAR():
 
 
 def compute_sharpe_ratio(total_return, vol, rf, df_len):
-    breakpoint()
     daily_return = total_return / 365*2
     daily_vol = vol*np.sqrt(365)
     return (daily_return - rf) / daily_vol

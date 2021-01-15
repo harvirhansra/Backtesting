@@ -1,4 +1,3 @@
-import os
 import requests
 import pandas as pd
 
@@ -34,7 +33,6 @@ def get_historical_from_coinbase(ticker, start_date, end_date, interval='1hr'):
     big_df = pd.DataFrame(columns=columns)
 
     dates = [dt for dt in daterange(start_date, end_date, interval)]
-    # breakpoint()
     for i in range(len(dates)):
         if i == len(dates)-1:
             break
@@ -46,6 +44,11 @@ def get_historical_from_coinbase(ticker, start_date, end_date, interval='1hr'):
         big_df = big_df.append(df)
 
     big_df.Time = pd.to_datetime(big_df.Time, unit='s')
+    for col in ['Low', 'High', 'Open', 'Close', 'Volume']:
+        big_df[col] = big_df[col].astype(float)
+
+    big_df = big_df.set_index('Time')
+    big_df.drop_duplicates(inplace=True)
     return big_df
 
 

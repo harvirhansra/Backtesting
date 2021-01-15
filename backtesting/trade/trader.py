@@ -1,43 +1,83 @@
 from collections import namedtuple
 
-TradeTuple = namedtuple('Trade', ['action', 'new_balance', 'price', 'quantity', 'date', 'string'])
+TradeTuple = namedtuple('Trade', ['type', 'new_balance', 'price', 'quantity', 'date', 'string'])
 
 
 class Trader:
 
-    def __init__(self, balance, ccy,  name='harvir', btc=0, fees=0.0015):
-        self.name = name
+    def __init__(self, balance, ccy, name='harvir', btc=0, fees=1):
         self.balance = balance
-        self.btc = btc
         self.ccy = ccy
-        self.fees = fees
+        self.name = name
+        self.btc = btc
+        self.fees = fees/100  # percentage to decimal
+        self.open_long = None
+        self.open_short = None
 
     def long(self, price, date, quantity=0, max=False):
-        quantity = self.balance / price if max else quantity
-        future_balance = self.balance - ((price*quantity) - (price*quantity)*self.fees)
+        quantity = (self.balance / price) if max else quantity
+        future_balance = self.balance - (price*quantity)  # - (price*quantity)*self.fees
 
-        if future_balance < 0:
-            raise Exception('Future balance is 0. Something has gone wrong')
+        if future_balance < -0.1:
+            raise Exception(f'Future balance is {future_balance}. Something has gone wrong')
 
-        if future_balance >= 0:
-            self.balance = future_balance
+        else:
+            self.balance = round(future_balance, 2)
             self.btc += quantity
 
-        return TradeTuple('buy', self.balance, price, quantity, date,
-                          'Bought {}{} at {} on {}'.format(quantity, self.ccy, price, date))
+        self.open_long = TradeTuple('long', self.balance, price, quantity, date,
+                                    f'Long {quantity}{self.ccy} at {price} on {date}')
+        return self.open_long
 
     def close_long(self, price, date, quantity=0, max=False):
-        quantity = self.btc if max else quantity
-        self.balance += ((price*quantity) - (price*quantity)*self.fees)
-        self.btc -= quantity
+        quantity = self.open_long.quantity if max else quantity
 
-        return TradeTuple('sell', self.balance, price, quantity, date,
-                          'Sold {}{} at {} on {}'.format(quantity, self.ccy, price, date))
+        if quantity > self.open_long.quantity:
+            raise Exception(f'Current long position is smaller than {quantity}')
+
+        if quantity <= self.open_long.quantity:
+            self.open_long = self.open_long._replace(quantity=(self.open_long.quantity - quantity))
+
+        future_btc = self.btc - quantity  #  - (price*quantity)*self.fees
+        if future_btc < 0:
+            raise Exception(f'Future crypto balance is {future_btc}. Something has gone wrong')
+
+        self.balance += round((price*quantity), 2)
+        self.btc = future_btc
+
+        if self.open_long.quantity == 0:
+            self.open_long = None
+
+        return TradeTuple('close long', self.balance, price, quantity, date,
+                          f'Closed Long {quantity}{self.ccy} at {price} on {date}')
 
     def short(self, price, date, quantity=0, max=False):
-        quantity = self.balance / price if max else quantity
-        return NotImplementedError
+        quantity = (self.balance / price)/2 if max else quantity  # half for now
+        if quantity > (self.balance / price) / 2:
+            raise Exception('Quantity is larger than 50% equity.')
+
+        self.balance += round((quantity*price), 2)
+
+        self.open_short = TradeTuple('short', self.balance, price, quantity, date,
+                                     f'Short {quantity}{self.ccy} at {price} on {date}')
+        return self.open_short
 
     def close_short(self, price, date, quantity=0, max=False):
-        quantity = self.btc if max else quantity
-        return NotImplementedError
+        quantity = self.open_short.quantity if max else quantity
+        if quantity > self.open_short.quantity:
+            raise Exception(f'Current short position is smaller than {quantity}')
+
+        if quantity <= self.open_short.quantity:
+            self.open_short = self.open_short._replace(quantity=(self.open_short.quantity - quantity))
+
+        future_balance = self.balance - (price*quantity)
+        if future_balance < 0:
+            raise Exception(f'Closing short has taken balance to {future_balance}')
+
+        self.balance = round(future_balance, 2)
+
+        if self.open_short.quantity == 0:
+            self.open_short = None
+
+        return TradeTuple('close short', self.balance, price, quantity, date,
+                          f'Closed Short {quantity}{self.ccy} at {price} on {date}')
