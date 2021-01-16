@@ -26,7 +26,7 @@ class Strategery(object):
         self.df['equity'] = initial_balance
 
         self.currency = currency
-        self.trader = Trader(initial_balance, currency)
+        self.trader = Trader(initial_balance, currency, fees=0.0025)
 
         self.start_day = 0
         self.start_date = self.df.index[self.start_day]
@@ -83,7 +83,7 @@ class Strategery(object):
         if self.log:
             print('')
             # print(f'Sharpe ratio: {sharpe}')
-            # print(f'Max drawdown: {max_drawdown}%')
+            print(f'Max drawdown: {max_drawdown}%')
             print(f'Mean return: {mean_return}%')
             print(f'Volatility: {volatility}%')
             print(f'Buy and hold return: {buy_and_hold}%')
@@ -681,7 +681,7 @@ class MA20MA10(Strategery):
 
             self.df.at[i, 'equity'] = self.trader.balance + (self.trader.btc * day.Close)
             self.peak_equity = self.df.loc[i].equity if self.df.loc[i].equity > self.peak_equity else self.peak_equity
-            self.df.at[i, 'drawdown_pct'] = -((self.peak_equity - self.df.loc[i].equity)/self.df.loc[i].equity)*100
+            self.df.at[i, 'drawdown_pct'] = -((self.peak_equity - self.df.loc[i].equity)/self.peak_equity)*100
 
             ten_above_twenty = day['MA10'] > day['MA20'] and self.prev_day['MA10'] <= self.prev_day['MA20']
             ten_below_twenty = day['MA10'] < day['MA20'] and self.prev_day['MA10'] >= self.prev_day['MA20']
@@ -695,7 +695,7 @@ class MA20MA10(Strategery):
                 if self.trader.open_short is not None:
                     self.close_short(i, day, max=True)
                     self.long(i, day, max=True)
-                elif self.trader.open_long is None:
+                if self.trader.open_long is None:
                     self.long(i, day, max=True)
 
             elif ten_below_twenty:
@@ -708,13 +708,10 @@ class MA20MA10(Strategery):
             elif rsi_is_above_90:
                 if self.trader.open_long is not None:
                     self.close_long(i, day, max=True)
-                    self.short(i, day, max=True)
-                elif self.trader.open_short is None:
-                    self.short(i, day, max=True)
 
-            # elif rsi_is_below_30:
-            #     if self.trader.open_long is None:
-            #         self.long(i, day, max=True)
+            elif rsi_is_below_30:
+                if self.trader.open_short is not None:
+                    self.close_short(i, day, max=True)
 
         if self.ui:
             self.gui.plot_price_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays,

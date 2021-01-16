@@ -18,14 +18,13 @@ def test_long_max(trader):
     assert trade.date == pd.Timestamp('2020-01-01 00:00:00')
 
 
-@pytest.mark.skip(reason='TODO')
 def test_long_max_with_fees(trader):
-    trader.fees = 1  # 1%
+    trader.fees = 0.01  # 1%
     trade = trader.long(100, pd.Timestamp('2020-01-01 00:00:00'), max=True)
     assert trade.type == 'long'
     assert trade.new_balance == 0
     assert trade.price == 100
-    assert trade.quantity == 10
+    assert trade.quantity == 9.900990099009901
     assert trade.date == pd.Timestamp('2020-01-01 00:00:00')
 
 
@@ -45,6 +44,16 @@ def test_long_quantity(trader):
     assert trade.date == pd.Timestamp('2020-01-01 00:00:00')
 
 
+def test_long_quantity_with_fees(trader):
+    trader.fees = 0.01  # 1%
+    trade = trader.long(100, pd.Timestamp('2020-01-01 00:00:00'), quantity=9.9)
+    assert trade.type == 'long'
+    assert trade.new_balance == 0.1
+    assert trade.price == 100
+    assert trade.quantity == 9.9
+    assert trade.date == pd.Timestamp('2020-01-01 00:00:00')
+
+
 def test_long_and_close_max_win(trader):
     trader.long(100, pd.Timestamp('2020-01-01 00:00:00'), max=True)
     trade = trader.close_long(120, pd.Timestamp('2020-02-01 00:00:00'), max=True)
@@ -56,6 +65,18 @@ def test_long_and_close_max_win(trader):
     assert trader.open_long is None
 
 
+def test_long_and_close_max_win_with_fees(trader):
+    trader.fees = 0.01  # 1%
+    trader.long(100, pd.Timestamp('2020-01-01 00:00:00'), max=True)
+    trade = trader.close_long(120, pd.Timestamp('2020-02-01 00:00:00'), max=True)
+    assert trade.type == 'close long'
+    assert trade.new_balance == 1176.24
+    assert trade.price == 120
+    assert trade.quantity == 9.900990099009901
+    assert trade.date == pd.Timestamp('2020-02-01 00:00:00')
+    assert trader.open_long is None
+
+
 def test_long_and_close_max_loss(trader):
     trader.long(100, pd.Timestamp('2020-01-01 00:00:00'), max=True)
     trade = trader.close_long(80, pd.Timestamp('2020-02-01 00:00:00'), max=True)
@@ -63,6 +84,18 @@ def test_long_and_close_max_loss(trader):
     assert trade.new_balance == 800
     assert trade.price == 80
     assert trade.quantity == 10
+    assert trade.date == pd.Timestamp('2020-02-01 00:00:00')
+    assert trader.open_long is None
+
+
+def test_long_and_close_max_loss_with_fees(trader):
+    trader.fees = 0.01  # 1%
+    trader.long(100, pd.Timestamp('2020-01-01 00:00:00'), max=True)
+    trade = trader.close_long(80, pd.Timestamp('2020-02-01 00:00:00'), max=True)
+    assert trade.type == 'close long'
+    assert trade.new_balance == 784.16
+    assert trade.price == 80
+    assert trade.quantity == 9.900990099009901
     assert trade.date == pd.Timestamp('2020-02-01 00:00:00')
     assert trader.open_long is None
 
@@ -86,7 +119,7 @@ def test_long_and_close_most_then_max(trader):
 def test_short_max(trader):
     trade = trader.short(100, pd.Timestamp('2020-01-01 00:00:00'), max=True)
     assert trade.type == 'short'
-    assert trade.new_balance == 1500
+    assert trade.new_balance == 1000
     assert trade.price == 100
     assert trade.quantity == 5
     assert trade.date == pd.Timestamp('2020-01-01 00:00:00')
@@ -102,19 +135,30 @@ def test_short_too_much(trader):
 def test_short_quantity(trader):
     trade = trader.short(100, pd.Timestamp('2020-01-01 00:00:00'), quantity=3)
     assert trade.type == 'short'
-    assert trade.new_balance == 1300
+    assert trade.new_balance == 1000
     assert trade.price == 100
     assert trade.quantity == 3
     assert trade.date == pd.Timestamp('2020-01-01 00:00:00')
 
 
-def test_short_and_close_gain(trader):
+def test_short_and_close_win(trader):
     trader.short(100, pd.Timestamp('2020-01-01 00:00:00'), max=True)
     trade = trader.close_short(80, pd.Timestamp('2020-02-01 00:00:00'), max=True)
     assert trade.type == 'close short'
     assert trade.new_balance == 1100
     assert trade.price == 80
     assert trade.quantity == 5
+    assert trade.date == pd.Timestamp('2020-02-01 00:00:00')
+
+
+def test_short_and_close_win_with_fees(trader):
+    trader.fees = 0.01
+    trader.short(100, pd.Timestamp('2020-01-01 00:00:00'), max=True)
+    trade = trader.close_short(80, pd.Timestamp('2020-02-01 00:00:00'), max=True)
+    assert trade.type == 'close short'
+    assert trade.new_balance == 1094.06
+    assert trade.price == 80
+    assert trade.quantity == 4.9504950495049505
     assert trade.date == pd.Timestamp('2020-02-01 00:00:00')
 
 
@@ -128,12 +172,23 @@ def test_short_and_close_loss(trader):
     assert trade.date == pd.Timestamp('2020-02-01 00:00:00')
 
 
+def test_short_and_close_loss_with_fees(trader):
+    trader.fees = 0.01
+    trader.short(100, pd.Timestamp('2020-01-01 00:00:00'), max=True)
+    trade = trader.close_short(120, pd.Timestamp('2020-02-01 00:00:00'), max=True)
+    assert trade.type == 'close short'
+    assert trade.new_balance == 896.04
+    assert trade.price == 120
+    assert trade.quantity == 4.9504950495049505
+    assert trade.date == pd.Timestamp('2020-02-01 00:00:00')
+
+
 def test_short_and_close_most_then_max(trader):
     trader.short(100, pd.Timestamp('2020-01-01 00:00:00'), max=True)
     trade1 = trader.close_short(90, pd.Timestamp('2020-02-01 00:00:00'), quantity=3)
     trade2 = trader.close_short(80, pd.Timestamp('2020-03-01 00:00:00'), max=True)
     assert trade1.type == 'close short'
-    assert trade1.new_balance == 1230
+    assert trade1.new_balance == 1030
     assert trade1.price == 90
     assert trade1.quantity == 3
     assert trade1.date == pd.Timestamp('2020-02-01 00:00:00')
@@ -141,4 +196,21 @@ def test_short_and_close_most_then_max(trader):
     assert trade2.new_balance == 1070
     assert trade2.price == 80
     assert trade2.quantity == 2
+    assert trade2.date == pd.Timestamp('2020-03-01 00:00:00')
+
+
+def test_short_and_close_most_then_max_with_fees(trader):
+    trader.fees = 0.01
+    trader.short(100, pd.Timestamp('2020-01-01 00:00:00'), max=True)
+    trade1 = trader.close_short(90, pd.Timestamp('2020-02-01 00:00:00'), quantity=3)
+    trade2 = trader.close_short(80, pd.Timestamp('2020-03-01 00:00:00'), max=True)
+    assert trade1.type == 'close short'
+    assert trade1.new_balance == 1025.05
+    assert trade1.price == 90
+    assert trade1.quantity == 3
+    assert trade1.date == pd.Timestamp('2020-02-01 00:00:00')
+    assert trade2.type == 'close short'
+    assert trade2.new_balance == 1064.06
+    assert trade2.price == 80
+    assert trade2.quantity == 1.9504950495049505
     assert trade2.date == pd.Timestamp('2020-03-01 00:00:00')
