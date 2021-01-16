@@ -92,12 +92,8 @@ class BacktestingGUI(QtWidgets.QMainWindow):
 
     def _start_button(self, section):
         start_button = QPushButton('Start Backtesting', self)
-        start_button.clicked.connect(lambda: print(start_button.text()))
+        start_button.clicked.connect(self._start_bt)
         section.addWidget(start_button)
-
-    # @pyqtSlot()
-    def _print_debug(self):
-        print('debug function triggered')
 
     def _start_bt(self):
         sys.stdout = self.log
@@ -180,8 +176,8 @@ class BacktestingGUI(QtWidgets.QMainWindow):
             self._price_ax.axvspan(d, p, facecolor='#545151')
 
         if plays is not None:
-            for date, price, action, _ in plays:
-                self._price_ax.annotate(action, (date, price), color='white',
+            for date, price, type, pnl, pnlpct in plays:
+                self._price_ax.annotate(type, (date, price), color='white',
                                         xycoords='data', xytext=(0, 40),
                                         textcoords='offset points',
                                         arrowprops=dict(arrowstyle="->",
