@@ -24,7 +24,7 @@ def test_long_max_with_fees(trader):
     assert trade.type == 'long'
     assert trade.new_balance == 0
     assert trade.price == 100
-    assert trade.quantity == 9.900990099009901
+    assert trade.quantity == 9.9009901
     assert trade.date == pd.Timestamp('2020-01-01 00:00:00')
 
 
@@ -72,7 +72,7 @@ def test_long_and_close_max_win_with_fees(trader):
     assert trade.type == 'close long'
     assert trade.new_balance == 1176.24
     assert trade.price == 120
-    assert trade.quantity == 9.900990099009901
+    assert trade.quantity == 9.9009901
     assert trade.date == pd.Timestamp('2020-02-01 00:00:00')
     assert trader.open_long is None
 
@@ -95,7 +95,7 @@ def test_long_and_close_max_loss_with_fees(trader):
     assert trade.type == 'close long'
     assert trade.new_balance == 784.16
     assert trade.price == 80
-    assert trade.quantity == 9.900990099009901
+    assert trade.quantity == 9.9009901
     assert trade.date == pd.Timestamp('2020-02-01 00:00:00')
     assert trader.open_long is None
 
@@ -158,7 +158,7 @@ def test_short_and_close_win_with_fees(trader):
     assert trade.type == 'close short'
     assert trade.new_balance == 1094.06
     assert trade.price == 80
-    assert trade.quantity == 4.9504950495049505
+    assert trade.quantity == 4.95049505
     assert trade.date == pd.Timestamp('2020-02-01 00:00:00')
 
 
@@ -179,7 +179,7 @@ def test_short_and_close_loss_with_fees(trader):
     assert trade.type == 'close short'
     assert trade.new_balance == 896.04
     assert trade.price == 120
-    assert trade.quantity == 4.9504950495049505
+    assert trade.quantity == 4.95049505
     assert trade.date == pd.Timestamp('2020-02-01 00:00:00')
 
 
@@ -212,5 +212,5 @@ def test_short_and_close_most_then_max_with_fees(trader):
     assert trade2.type == 'close short'
     assert trade2.new_balance == 1064.06
     assert trade2.price == 80
-    assert trade2.quantity == 1.9504950495049505
+    assert trade2.quantity == 1.95049505
     assert trade2.date == pd.Timestamp('2020-03-01 00:00:00')

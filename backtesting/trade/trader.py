@@ -16,6 +16,7 @@ class Trader:
 
     def long(self, price, date, quantity=0, max=False):
         quantity = (self.balance / (price + self.fees*price)) if max else quantity
+        quantity = round(quantity, 8)  # upto 8dp for BTC
 
         future_balance = self.balance - (price*quantity) - (price*quantity*self.fees)
         if future_balance < -0.1:
@@ -30,6 +31,7 @@ class Trader:
 
     def close_long(self, price, date, quantity=0, max=False):
         quantity = self.open_long.quantity if max else quantity
+        quantity = round(quantity, 8)  # upto 8dp for BTC
 
         if quantity > self.open_long.quantity:
             raise Exception(f'Current long position is smaller than {quantity}')
@@ -54,6 +56,7 @@ class Trader:
         quantity = (self.balance / (price + self.fees*price))/2 if max else quantity  # half for now
         if quantity > (self.balance / price) / 2:
             raise Exception('Quantity is larger than 50% equity.')
+        quantity = round(quantity, 8)  # upto 8dp for BTC
 
         self.balance -= price*quantity*self.fees
 
@@ -65,6 +68,7 @@ class Trader:
         quantity = self.open_short.quantity if max else quantity
         if quantity > self.open_short.quantity:
             raise Exception(f'Current short position is smaller than {quantity}')
+        quantity = round(quantity, 8)  # upto 8dp for BTC
 
         future_balance = self.balance + ((self.open_short.price - price) * quantity)
         if future_balance < 0:

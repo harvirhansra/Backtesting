@@ -2,6 +2,7 @@ from collections import namedtuple
 
 wl_tuple = namedtuple('WinOrLoss', ['winloss', 'pnl', 'pnlpct', 'colour'])
 
+
 def win_or_loss(s0, s1, quantity, long_short):
     pnl = s1 - s0
     pnl_pct = (pnl / s0) * 100
@@ -18,7 +19,7 @@ def win_or_loss(s0, s1, quantity, long_short):
         else:
             return wl_tuple('loss', -round(pnl*quantity, 3), -round(pnl_pct, 3), 'red')
     else:
-        raise Exception('Trade type was {long_short}')
+        raise Exception(f'Trade type was {long_short}. Must be close long or close short')
 
 
 def report_final_pnl(start_fiat, start_ccy, balance, ccy, fiat, log=True):
@@ -61,6 +62,7 @@ def report_plays_stats(plays):
     print('')
     print(f'Losing long trades: {long_losses} - {long_losses_pct}%')
     print(f'Winning long trades: {long_wins} - {long_wins_pct}%')
+
     print('')
     print(f'Losing short trades: {short_losses} - {short_losses_pct}%')
     print(f'Winning short trades: {short_wins} - {short_wins_pct}%')
