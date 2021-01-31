@@ -21,12 +21,12 @@ class Strategery(object):
         self.log = log
 
         self.df = market_df
-        self.df.loc[:, 'pct_change'] = 0
-        self.df['drawdown_pct'] = 0
+        self.df['pnl_pct'] = 0.0
+        self.df['drawdown_pct'] = 0.0
         self.df['equity'] = initial_balance
 
         self.currency = currency
-        self.trader = Trader(initial_balance, currency, fees=0.0025)
+        self.trader = Trader(initial_balance, currency, fees=0.0001)
 
         self.start_day = 0
         self.start_date = self.df.index[self.start_day]
@@ -49,8 +49,7 @@ class Strategery(object):
     def close_long(self, date, day, quantity=0, max=True):
         trade = self.trader.close_long(day.Close, date, quantity=0, max=max)
         wl = win_or_loss(self.prev_trade.price, trade.price, trade.quantity, trade.type)
-        # self.prev_trade = trade
-        self.df.at[date, 'pct_change'] = wl.pnlpct
+        self.df.at[date, 'pnl_pct'] = wl.pnlpct
         self.plays.append(play_tuple(trade.date, trade.price, trade.type, wl.pnl, wl.pnlpct))
         if self.log:
             print(', '.join([str(date), wl.winloss, '£'+str(wl.pnl), str(wl.pnlpct)+'%']))
@@ -72,12 +71,12 @@ class Strategery(object):
 
     def report(self):
         buy_and_hold = round(((self.df.iloc[-1].Close - self.df.iloc[0].Close) / self.df.iloc[0].Close) * 100, 2)
-        pnl = report_final_pnl(self.start_balance, self.start_btc, self.trader.balance, self.trader.btc,
-                               self.currency, self.log)
+        report_final_pnl(self.start_balance, self.start_btc, self.trader.balance, self.trader.btc,
+                         self.currency, self.log)
         report_plays_stats(self.plays)
         max_drawdown = round(min(self.df['drawdown_pct']), 2)
-        mean_return = round(self.df.loc[self.df['pct_change'] != 0]['pct_change'].mean(), 2)
-        volatility = round(self.df.loc[self.df['pct_change'] != 0]['pct_change'].std(), 2)
+        mean_return = round(self.df.loc[self.df['pnl_pct'] != 0]['pnl_pct'].mean(), 2)
+        volatility = round(self.df.loc[self.df['pnl_pct'] != 0]['pnl_pct'].std(), 2)
         # sharpe = round(compute_sharpe_ratio(pnl, volatility, 0.14, len(self.df)), 2)
 
         if self.log:
@@ -161,7 +160,7 @@ class AboveUnderMAStd(Strategery):
                                       (self.df.MA[:i].values - self.std*self.df.MA_std[:i].values))
             self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
             self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
-            self.gui.plot_distribution_graph(self.df.loc[self.df['pct_change'] != 0]['pct_change'].values)
+            self.gui.plot_distribution_graph(self.df.loc[self.df['pnl_pct'] != 0]['pnl_pct'].values)
 
         # if btc is held at the end of the market data, then sell for USD to get USD PnL
         if self.trader.btc > 0 and (not self.calib):
@@ -226,7 +225,7 @@ class MACD(Strategery):
                                       self.df.MACD[:i], self.df.SL[:i])
             self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
             self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
-            self.gui.plot_distribution_graph(self.df.loc[self.df['pct_change'] != 0]['pct_change'].values)
+            self.gui.plot_distribution_graph(self.df.loc[self.df['pnl_pct'] != 0]['pnl_pct'].values)
 
         # if btc is held at the end of the market data, then sell for USD to get USD PnL
         if self.trader.btc > 0:
@@ -283,7 +282,7 @@ class MACDZero(Strategery):
                                       self.df.MACD[:i], self.df.SL[:i])
             self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
             self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
-            self.gui.plot_distribution_graph(self.df.loc[self.df['pct_change'] != 0]['pct_change'].values)
+            self.gui.plot_distribution_graph(self.df.loc[self.df['pnl_pct'] != 0]['pnl_pct'].values)
 
         # if btc is held at the end of the market data, then sell for USD to get USD PnL
         if self.trader.btc > 0:
@@ -342,7 +341,7 @@ class RSI(Strategery):
                                       self.df.Close[:i], self.plays, self.df.RSI[:i])
             self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
             self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
-            self.gui.plot_distribution_graph(self.df.loc[self.df['pct_change'] != 0]['pct_change'].values)
+            self.gui.plot_distribution_graph(self.df.loc[self.df['pnl_pct'] != 0]['pnl_pct'].values)
 
         # if btc is held at the end of the market data, then sell for USD to get USD PnL
         if self.trader.btc > 0:
@@ -407,7 +406,7 @@ class RSI(Strategery):
                                       self.df.Close[:i], self.plays, self.df.RSI[:i])
             self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
             self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
-            self.gui.plot_distribution_graph(self.df.loc[self.df['pct_change'] != 0]['pct_change'].values)
+            self.gui.plot_distribution_graph(self.df.loc[self.df['pnl_pct'] != 0]['pnl_pct'].values)
 
         # if btc is held at the end of the market data, then sell for USD to get USD PnL
         if self.trader.btc > 0:
@@ -482,7 +481,7 @@ class RSIandMACD(Strategery):
                                       self.df.Close[:i], self.plays)  # , self.df.RSI[:i])
             self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
             self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
-            self.gui.plot_distribution_graph(self.df.loc[self.df['pct_change'] != 0]['pct_change'].values)
+            self.gui.plot_distribution_graph(self.df.loc[self.df['pnl_pct'] != 0]['pnl_pct'].values)
 
         # if btc is held at the end of the market data, then sell for USD to get USD PnL
         if self.trader.btc > 0:
@@ -550,7 +549,7 @@ class RSIdelay(Strategery):
                                       self.df.Close[:i], self.plays, self.df.RSI[:i])
             self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
             self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
-            self.gui.plot_distribution_graph(self.df.loc[self.df['pct_change'] != 0]['pct_change'].values)
+            self.gui.plot_distribution_graph(self.df.loc[self.df['pnl_pct'] != 0]['pnl_pct'].values)
 
         # if btc is held at the end of the market data, then sell for USD to get USD PnL
         if self.trader.btc > 0:
@@ -634,8 +633,8 @@ class MA50MA10(Strategery):
                                       self.df['MA50'][:i], self.df['MA10'][:i], self.df['RSI'][:i])
             self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
             self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
-            self.gui.plot_distribution_graph(self.df.loc[self.df['pct_change'] != 0]['pct_change'].values)
-            # self.gui.plot_distribution_graph(self.df['pct_change'].values)
+            self.gui.plot_distribution_graph(self.df.loc[self.df['pnl_pct'] != 0]['pnl_pct'].values)
+            # self.gui.plot_distribution_graph(self.df['pnl_pct'].values)
 
 
         # if btc is held at the end of the market data, then sell for USD to get USD PnL
@@ -709,17 +708,17 @@ class MA20MA10(Strategery):
                 if self.trader.open_long is not None:
                     self.close_long(i, day, max=True)
 
-            elif rsi_is_below_30:
+            elif rsi_is_below_20:
                 if self.trader.open_short is not None:
                     self.close_short(i, day, max=True)
 
         if self.ui:
             self.gui.plot_price_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays,
-                                      self.df['MA50'][:i], self.df['MA20'][:i], self.df['RSI'][:i])
+                                      self.df['MA20'][:i], self.df['MA10'][:i], self.df['RSI'][:i])
             self.gui.plot_equity_graph(self.df.index[:len(self.df.Close[:i])], self.df.loc[:i].equity)
             self.gui.plot_drawdown_graph(self.df.index[:len(self.df.Close[:i])], self.df[:i].drawdown_pct.values)
-            self.gui.plot_distribution_graph(self.df.loc[self.df['pct_change'] != 0]['pct_change'].values)
-            # self.gui.plot_distribution_graph(self.df['pct_change'].values)
+            self.gui.plot_distribution_graph(self.df.loc[self.df['pnl_pct'] != 0]['pnl_pct'].values)
+            # self.gui.plot_distribution_graph(self.df['pnl_pct'].values)
 
 
         # if btc is held at the end of the market data, then sell for USD to get USD PnL
