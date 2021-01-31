@@ -61,7 +61,8 @@ def compute_SAR():
     raise NotImplementedError
 
 
-def compute_sharpe_ratio(total_return, vol, rf, df_len):
-    daily_return = total_return / 365*2
-    daily_vol = vol*np.sqrt(365)
-    return (daily_return - rf) / daily_vol
+def compute_sharpe_ratio(returns, rfr, hourly=False):
+    N = 365*24 if hourly else 365
+    returns = returns / 100
+    excess_returns = returns - rfr/N
+    return round(np.sqrt(N) * excess_returns.mean() / excess_returns.std(), 3)

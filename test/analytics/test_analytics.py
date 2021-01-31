@@ -1,4 +1,5 @@
 import pytest
+import random
 import numpy as np
 import pandas as pd
 
@@ -105,6 +106,15 @@ def test_compute_SAR():
     raise NotImplementedError
 
 
-@pytest.mark.skip(reason='NotImplemented')
-def test_compute_sharpe_ratio():
-    raise NotImplementedError
+def test_compute_sharpe_ratio_daily():
+    df = pd.DataFrame({'Date': pd.date_range(start='2019-01-01 00:00:00', end='2019-12-31 00:00:00'),
+                       'pnl_pct': [-1, 2, -3, 4, -5]*73})
+    ratio = compute_sharpe_ratio(df.pnl_pct.values, 0.0014)
+    assert ratio == -3.516
+
+
+def test_compute_sharpe_ratio_hourly():
+    df = pd.DataFrame({'Date': pd.date_range(start='2019-01-01 00:00:00', end='2019-12-31 23:00:00', freq='1H'),
+                       'pnl_pct': [-0.1, 0.2, -0.3, 0.4, -0.5]*73*24})
+    ratio = compute_sharpe_ratio(df.pnl_pct.values, 0.0014, hourly=True)
+    assert ratio == -17.221

@@ -77,11 +77,11 @@ class Strategery(object):
         max_drawdown = round(min(self.df['drawdown_pct']), 2)
         mean_return = round(self.df.loc[self.df['pnl_pct'] != 0]['pnl_pct'].mean(), 2)
         volatility = round(self.df.loc[self.df['pnl_pct'] != 0]['pnl_pct'].std(), 2)
-        # sharpe = round(compute_sharpe_ratio(pnl, volatility, 0.14, len(self.df)), 2)
+        sharpe = compute_sharpe_ratio(self.df.pnl_pct.values, 0.0014, hourly=True)
 
         if self.log:
             print('')
-            # print(f'Sharpe ratio: {sharpe}')
+            print(f'Sharpe ratio: {sharpe}')
             print(f'Max drawdown: {max_drawdown}%')
             print(f'Mean return: {mean_return}%')
             print(f'Volatility: {volatility}%')
