@@ -79,13 +79,13 @@ class HourlyDL(StrategeryDL):
 
             if not self.market_entered:
                 if prediction > day.Close:
-                    self.buy(i, day, max=True)
+                    self.long(i, day, max=True)
                     self.market_entered = True
             else:
                 if prediction < day.Close and self.trader.btc > 0:
-                    self.sell(i, day, max=True)
+                    self.close_long(i, day, max=True)
                 elif prediction > day.Close and self.trader.balance > 0:
-                    self.buy(i, day, max=True)
+                    self.long(i, day, max=True)
 
             self.df.at[i, 'equity'] = self.trader.balance + (self.trader.btc * day.Close)
             self.peak_equity = self.df.loc[i].equity if self.df.loc[i].equity > self.peak_equity else self.peak_equity
@@ -98,7 +98,7 @@ class HourlyDL(StrategeryDL):
         # plt.show()
 
         if self.trader.btc > 0:
-            self.sell(i, day, max=True)
+            self.close_long(i, day, max=True)
 
         if self.ui:
             self.gui.plot_price_graph(self.df.index[:len(self.df.Close[:i])], self.df.Close[:i], self.plays)

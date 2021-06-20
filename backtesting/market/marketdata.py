@@ -24,7 +24,9 @@ def get_historical_from_coinbase(ticker, start_date, end_date, interval='1hr'):
 
     auth = CoinbaseExchangeAuth(API_KEY, API_SECRET, API_PASS)
 
-    if interval == '1hr':
+    if interval == '1day':
+        granularity = 86400
+    elif interval == '1hr':
         granularity = 3600
     elif interval == '15mins':
         granularity = 900
@@ -53,7 +55,9 @@ def get_historical_from_coinbase(ticker, start_date, end_date, interval='1hr'):
 
 
 def daterange(start_date, end_date, interval):
-    if interval == '1hr':
+    if interval == '1day':
+        delta = timedelta(hours=7200)
+    elif interval == '1hr':
         delta = timedelta(hours=300)
     elif interval == '15mins':
         delta = timedelta(hours=75)
